@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name | default("Fazenda") }}{% endblock %}</title>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX via CDN -->
+    <script src="https://unpkg.com/htmx.org@2.0.3" crossorigin="anonymous"></script>
+</head>
+<body class="min-h-full flex flex-col text-slate-900 antialiased">
+    <header class="border-b border-slate-200 bg-white shadow-2xs">
+        <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+            <div class="flex items-center gap-2.5">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white">
+                    FZ
+                </span>
+                <span class="text-lg font-semibold tracking-tight text-slate-900">
+                    {{ app_name | default("Fazenda") }}
+                </span>
+            </div>
+            <div class="flex items-center gap-3 text-xs font-medium text-slate-500">
+                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                    env: {{ environment | default("development") }}
+                </span>
+                <a href="/health" class="text-emerald-700 hover:text-emerald-800 hover:underline">
+                    /health
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+        FastAPI + SQLAlchemy 2.0 + Jinja2 + HTMX + Tailwind CSS
+    </footer>
+</body>
+</html>
+

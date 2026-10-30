@@ -1,0 +1,2 @@
+"""Suíte de testes automatizados."""
+
