@@ -1,41 +1,32 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[project]
+[tool.poetry]
 name = "fazenda"
 version = "0.1.0"
 description = "Gerenciador de rebanho - Webapp Full-Stack em Python (FastAPI + HTMX + SQLAlchemy 2.0)"
+authors = ["Gabriel Martins"]
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "jinja2>=3.1.4",
-    "python-multipart>=0.0.17",
-    "sqlalchemy>=2.0.36",
-    "alembic>=1.14.0",
-    "pydantic-settings>=2.6.1",
-    "psycopg[binary]>=3.2.3",
-]
+packages = [{ include = "app" }]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.3.3",
-    "httpx>=0.27.2",
-]
+[tool.poetry.dependencies]
+python = "^3.13"
+fastapi = "^0.115.0"
+uvicorn = { extras = ["standard"], version = "^0.32.0" }
+jinja2 = "^3.1.4"
+python-multipart = "^0.0.17"
+sqlalchemy = "^2.0.36"
+alembic = "^1.14.0"
+pydantic-settings = "^2.6.1"
+psycopg = { extras = ["binary"], version = "^3.2.3" }
 
-[dependency-groups]
-dev = [
-    "pytest>=8.3.3",
-    "httpx>=0.27.2",
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["app"]
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+httpx = "^0.27.2"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-v -q"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
 

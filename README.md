@@ -7,6 +7,7 @@ Boilerplate full-stack em Python construído sobre uma **arquitetura em camadas 
 ## Stack Tecnológica
 
 - **Runtime:** Python 3.13+
+- **Gerenciador de Dependências:** Poetry
 - **Web Framework:** FastAPI + Uvicorn
 - **Frontend SSR/Reativo:** Jinja2 + HTMX + Tailwind CSS (via CDN)
 - **ORM & Migrações:** SQLAlchemy 2.0 (`DeclarativeBase`) + Alembic + `psycopg` v3
@@ -66,21 +67,21 @@ Sobe o banco **PostgreSQL 17** e a aplicação **FastAPI** com hot-reload mapead
 
 ```bash
 # Subir os serviços em background
-make compose-up
+make up
 
 # Aplicar migrações no banco do container (opcional)
 docker compose exec app alembic upgrade head
 
 # Derrubar os serviços
-make compose-down
+make down
 ```
 
-### 3. Usando Ambiente Virtual Local + Makefile
+### 3. Usando Poetry + Makefile
 
-Caso já possua um `.venv` com Python 3.13+ ativo:
+Com o **Poetry** e **Python 3.13+** instalados localmente:
 
 ```bash
-# Instalar dependências (usa uv automaticamente se disponível ou pip)
+# Instalar dependências (produção + desenvolvimento) via Poetry
 make install
 
 # Executar a suíte de testes (Pytest)
@@ -114,11 +115,11 @@ Crie um novo **Web Service** conectado ao repositório Git com os seguintes par�
 - **Runtime:** `Python 3` (ou `Docker`, caso prefira deploy via `Dockerfile`)
 - **Build Command:**
   ```bash
-  pip install --upgrade pip && pip install . && alembic upgrade head
+  poetry install --only main && poetry run alembic upgrade head
   ```
 - **Start Command:**
   ```bash
-  uvicorn app.main:app --host 0.0.0.0 --port $PORT
+  poetry run uvicorn app.main:app --host 0.0.0.0 --port $PORT
   ```
 - **Health Check Path:** `/health`
 
