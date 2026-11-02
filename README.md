@@ -24,21 +24,27 @@ Boilerplate full-stack em Python construído sobre uma **arquitetura em camadas 
 ├── app/
 │   ├── application/
 │   │   ├── routers/
-│   │   │   ├── health.py       # GET /health (status do app e SELECT 1 no banco)
-│   │   │   └── home.py         # GET / e GET /htmx/ping (SSR com Jinja2 + HTMX)
-│   │   └── schemas/            # DTOs / Schemas Pydantic
+│   │   │   ├── animais.py      # Rotas SSR de listagem, cadastro, detalhes, edição e exclusão de animais
+│   │   │   ├── pesagens.py     # Rotas SSR/HTMX de pesagem individual e pesagem em lote
+│   │   │   └── health.py       # GET /health (status do app e SELECT 1 no banco)
+│   │   ├── schemas/            # DTOs / Schemas Pydantic (Animal e Pesagem)
+│   │   └── templating.py       # Configuração Jinja2 e filtros de formatação
 │   ├── domain/
 │   │   ├── core/
 │   │   │   └── config.py       # Pydantic Settings (normalização automática de DATABASE_URL)
 │   │   ├── models/
-│   │   │   └── base.py         # DeclarativeBase do SQLAlchemy 2.0
-│   │   ├── repositories/       # Contratos/Abstrações de repositórios
+│   │   │   ├── base.py         # DeclarativeBase do SQLAlchemy 2.0
+│   │   │   ├── enums.py        # Enums não nativos (Fazenda, Categoria, Status)
+│   │   │   ├── animal.py       # Entidade Animal
+│   │   │   └── pesagem.py      # Entidade Pesagem
+│   │   ├── repositories/       # Repositórios SQLAlchemy (AnimalRepository, PesagemRepository)
 │   │   └── use_cases/          # Casos de uso do domínio
 │   ├── infrastructure/
 │   │   └── database.py         # Engine, SessionLocal e dependência get_db
 │   ├── templates/
 │   │   ├── base.html           # Layout base HTML5 (Tailwind CSS + HTMX via CDN)
-│   │   └── home.html           # Página inicial com interação HTMX
+│   │   ├── animais/            # Telas de listagem paginada, cadastro/edição e detalhes do animal
+│   │   └── pesagens/           # Tela de lançamento de pesagem em lote
 │   └── main.py                 # Entrypoint e fábrica da aplicação FastAPI
 ├── alembic/                    # Ambiente de migrações conectado ao Base.metadata
 ├── tests/                      # Testes funcionais com Pytest e SQLite em memória
@@ -96,7 +102,10 @@ make run
 
 ### Rotas Disponíveis
 
-- `http://localhost:8000/` — Interface inicial SSR com teste interativo HTMX (`GET /htmx/ping`)
+- `http://localhost:8000/` — Listagem paginada do rebanho com filtros e último peso registrado
+- `http://localhost:8000/animais/novo` — Cadastro de animal (com pesagem inicial opcional)
+- `http://localhost:8000/animais/{id}` — Detalhes do animal, histórico de pesagens e lançamento individual
+- `http://localhost:8000/pesagens/lote` — Lançamento rápido de pesagens em lote
 - `http://localhost:8000/health` — Healthcheck validando conectividade com o banco (`SELECT 1`)
 - `http://localhost:8000/docs` — Documentação interativa OpenAPI (Swagger UI)
 

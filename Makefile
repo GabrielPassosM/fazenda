@@ -1,4 +1,4 @@
-.PHONY: help install run test up down migrate revision
+.PHONY: help install run test up down start migrate revision
 
 POETRY ?= poetry
 
@@ -11,11 +11,15 @@ install: ## Instala as dependências do projeto (produção + desenvolvimento) v
 run: ## Inicia o servidor local em modo de desenvolvimento (hot-reload)
 	$(POETRY) run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-test: ## Executa a suíte de testes automatizados com Pytest
-	$(POETRY) run pytest
+test: ## Executa a suíte de testes automatizados com Pytest e relatório de cobertura
+	$(POETRY) run pytest --cov=app --cov-report=term-missing
 
 up: ## Sobe os containers locais (app + PostgreSQL 17) em background
 	docker compose up --build -d
+
+start: ## Sobe o Docker Compose e aplica as migrações do Alembic (sistema pronto para uso)
+	docker compose up --build -d
+	docker compose exec app alembic upgrade head
 
 down: ## Para e remove os containers locais
 	docker compose down

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ app_name | default("Fazenda") }}{% endblock %}</title>
+    <title>{% block title %}{{ app_name | default("Fazenda - Gestão de Rebanho") }}{% endblock %}</title>
 
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,34 +12,75 @@
     <script src="https://unpkg.com/htmx.org@2.0.3" crossorigin="anonymous"></script>
 </head>
 <body class="min-h-full flex flex-col text-slate-900 antialiased">
-    <header class="border-b border-slate-200 bg-white shadow-2xs">
-        <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-            <div class="flex items-center gap-2.5">
-                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white">
+    {% set current_path = request.url.path if request is defined else "/" %}
+    <header class="border-b border-slate-200 bg-white shadow-2xs sticky top-0 z-20">
+        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+            <a href="/" class="flex items-center gap-2.5 group">
+                <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 text-sm font-bold text-white shadow-xs transition group-hover:bg-emerald-800">
                     FZ
                 </span>
-                <span class="text-lg font-semibold tracking-tight text-slate-900">
-                    {{ app_name | default("Fazenda") }}
-                </span>
-            </div>
-            <div class="flex items-center gap-3 text-xs font-medium text-slate-500">
-                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
-                    env: {{ environment | default("development") }}
-                </span>
-                <a href="/health" class="text-emerald-700 hover:text-emerald-800 hover:underline">
-                    /health
+                <div>
+                    <span class="block text-base font-bold tracking-tight text-slate-900 leading-none">
+                        Fazenda
+                    </span>
+                    <span class="block text-xs font-medium text-slate-500 mt-0.5">
+                        Gestão de Rebanho & Pesagens
+                    </span>
+                </div>
+            </a>
+
+            <nav class="flex items-center gap-1 sm:gap-2">
+                <a
+                    href="/"
+                    class="rounded-lg px-3 py-2 text-sm font-medium transition {% if current_path == '/' or (current_path.startswith('/animais') and current_path != '/animais/novo') %}bg-emerald-50 text-emerald-800{% else %}text-slate-600 hover:bg-slate-100 hover:text-slate-900{% endif %}"
+                >
+                    Rebanho
                 </a>
-            </div>
+                <a
+                    href="/pesagens/lote"
+                    class="rounded-lg px-3 py-2 text-sm font-medium transition {% if current_path.startswith('/pesagens/lote') %}bg-emerald-50 text-emerald-800{% else %}text-slate-600 hover:bg-slate-100 hover:text-slate-900{% endif %}"
+                >
+                    Pesagem em Lote
+                </a>
+                <a
+                    href="/animais/novo"
+                    class="ml-1 inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white shadow-2xs transition hover:bg-emerald-800"
+                >
+                    <span>+ Novo Animal</span>
+                </a>
+            </nav>
         </div>
     </header>
 
-    <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
+    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        {% if msg %}
+        <div class="mb-6 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-2xs">
+            <div class="flex items-center gap-2.5">
+                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">✓</span>
+                <span class="font-medium">{{ msg }}</span>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" class="text-emerald-700 hover:text-emerald-900 font-bold px-1 cursor-pointer">✕</button>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="mb-6 flex items-center justify-between rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 shadow-2xs">
+            <div class="flex items-center gap-2.5">
+                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-600 text-xs font-bold text-white">!</span>
+                <span class="font-medium">{{ error }}</span>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" class="text-rose-700 hover:text-rose-900 font-bold px-1 cursor-pointer">✕</button>
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
     </main>
 
     <footer class="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
-        FastAPI + SQLAlchemy 2.0 + Jinja2 + HTMX + Tailwind CSS
+        <div class="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6">
+            <span>Fazenda — Sistema de Acompanhamento de Gado</span>
+            <a href="/health" class="text-slate-400 hover:text-emerald-700">Status do Sistema</a>
+        </div>
     </footer>
 </body>
 </html>
-

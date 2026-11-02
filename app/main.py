@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.application.routers import health, home
+from app.application.routers import animais, health, pesagens
 from app.domain.core.config import settings
 
 
@@ -12,10 +12,10 @@ def create_app() -> FastAPI:
     )
 
     application.include_router(health.router)
-    application.include_router(home.router)
+    application.include_router(animais.router)
+    application.include_router(pesagens.router)
 
     return application
 
 
 app = create_app()
-

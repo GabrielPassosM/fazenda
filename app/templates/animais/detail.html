@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Animal #{{ animal.numero }} | {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Breadcrumb e Cabeçalho -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <a href="/" class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800">
+                ← Voltar para a listagem do rebanho
+            </a>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+                <h1 class="font-mono text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                    Animal #{{ animal.numero }}
+                </h1>
+
+                <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold {% if animal.fazenda.value == 'tiziu' %}bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-600/20{% else %}bg-indigo-50 text-indigo-800 ring-1 ring-inset ring-indigo-600/20{% endif %}">
+                    Fazenda {{ animal.fazenda.label }}
+                </span>
+
+                {% if animal.status.value == 'ativo' %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
+                    {{ animal.status.label }}
+                </span>
+                {% elif animal.status.value == 'abatido' %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                    <span class="h-1.5 w-1.5 rounded-full bg-amber-600"></span>
+                    {{ animal.status.label }}
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-500/20">
+                    <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                    {{ animal.status.label }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+            <a
+                href="/animais/{{ animal.id }}/editar"
+                class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-2xs transition hover:bg-slate-50"
+            >
+                Editar Animal
+            </a>
+            <form
+                method="post"
+                action="/animais/{{ animal.id }}/excluir"
+                onsubmit="return confirm('Tem certeza que deseja excluir o animal #{{ animal.numero }} e todo o seu histórico de pesagens?');"
+            >
+                <button
+                    type="submit"
+                    class="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 cursor-pointer"
+                >
+                    Excluir
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumo Cadastral + Indicador de Peso -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Categoria</span>
+            <span class="mt-1 block text-lg font-bold text-slate-900">{{ animal.categoria.label }}</span>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Data de Entrada</span>
+            <span class="mt-1 block text-lg font-bold text-slate-900">{{ animal.data_entrada | format_date }}</span>
+        </div>
+
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-2xs">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-emerald-700">Último Peso Registrado</span>
+            {% if ultima_pesagem %}
+            <span class="mt-1 block text-xl font-bold text-emerald-900">{{ ultima_pesagem.peso_kg | format_peso }}</span>
+            <span class="text-xs text-emerald-700">em {{ ultima_pesagem.data_pesagem | format_date }}</span>
+            {% else %}
+            <span class="mt-1 block text-sm italic text-slate-500">Nenhuma pesagem</span>
+            {% endif %}
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Total de Pesagens</span>
+            <span class="mt-1 block text-lg font-bold text-slate-900">{{ pesagens_com_variacao | length }}</span>
+        </div>
+    </div>
+
+    {% if animal.observacoes %}
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+        <span class="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Observações do Animal</span>
+        <p class="text-sm text-slate-700 whitespace-pre-line">{{ animal.observacoes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Grid Principal: Nova Pesagem Individual + Histórico -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <!-- Formulário de Pesagem Individual -->
+        <div class="lg:col-span-1">
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+                <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
+                    Nova Pesagem Individual
+                </h2>
+
+                <form method="post" action="/animais/{{ animal.id }}/pesagens" class="mt-4 space-y-4">
+                    <div>
+                        <label for="peso_kg" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                            Peso (kg) *
+                        </label>
+                        <input
+                            id="peso_kg"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            name="peso_kg"
+                            required
+                            placeholder="Ex: 350.00"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="data_pesagem" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                            Data da Pesagem *
+                        </label>
+                        <input
+                            id="data_pesagem"
+                            type="date"
+                            name="data_pesagem"
+                            value="{{ today }}"
+                            required
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="observacao" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                            Observação (opcional)
+                        </label>
+                        <input
+                            id="observacao"
+                            type="text"
+                            name="observacao"
+                            placeholder="Ex: Vacinação / Vermífugo"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                        >
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-2xs transition hover:bg-emerald-800 cursor-pointer"
+                    >
+                        + Registrar Pesagem
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Histórico de Pesagens -->
+        <div class="lg:col-span-2">
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs">
+                <div class="border-b border-slate-200 px-5 py-4 flex items-center justify-between">
+                    <h2 class="text-base font-bold text-slate-900">Histórico de Pesagens</h2>
+                    <span class="text-xs text-slate-500">Da mais recente para a mais antiga</span>
+                </div>
+
+                {% if pesagens_com_variacao %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th scope="col" class="px-5 py-3">Data</th>
+                                <th scope="col" class="px-5 py-3">Peso</th>
+                                <th scope="col" class="px-5 py-3">Evolução</th>
+                                <th scope="col" class="px-5 py-3">Observação</th>
+                                <th scope="col" class="px-5 py-3 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 bg-white">
+                            {% for item in pesagens_com_variacao %}
+                            {% set p = item.pesagem %}
+                            {% set var = item.variacao_kg %}
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="whitespace-nowrap px-5 py-3.5 font-medium text-slate-800">
+                                    {{ p.data_pesagem | format_date }}
+                                    {% if loop.first %}
+                                    <span class="ml-1.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-800">
+                                        Atual
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="whitespace-nowrap px-5 py-3.5 font-bold text-slate-900">
+                                    {{ p.peso_kg | format_peso }}
+                                </td>
+
+                                <td class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold">
+                                    {% if var is none %}
+                                    <span class="text-slate-400">1ª pesagem</span>
+                                    {% elif var > 0 %}
+                                    <span class="text-emerald-700">+{{ var | format_peso }}</span>
+                                    {% elif var < 0 %}
+                                    <span class="text-rose-600">{{ var | format_peso }}</span>
+                                    {% else %}
+                                    <span class="text-slate-500">0,00 kg</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="px-5 py-3.5 text-slate-600">
+                                    {{ p.observacao or "—" }}
+                                </td>
+
+                                <td class="whitespace-nowrap px-5 py-3.5 text-right">
+                                    <form
+                                        method="post"
+                                        action="/pesagens/{{ p.id }}/excluir"
+                                        onsubmit="return confirm('Deseja realmente excluir esta pesagem de {{ p.peso_kg | format_peso }} ({{ p.data_pesagem | format_date }})?');"
+                                        class="inline"
+                                    >
+                                        <button
+                                            type="submit"
+                                            class="text-xs font-medium text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                                        >
+                                            Excluir
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="px-6 py-10 text-center text-sm text-slate-500">
+                    Nenhuma pesagem registrada para este animal até o momento. Utilize o formulário ao lado para adicionar a primeira pesagem.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
