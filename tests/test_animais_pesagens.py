@@ -234,6 +234,56 @@ def test_pagination_animais(client: TestClient, db_session: Session) -> None:
     assert "B-16" in page2.text
 
 
+def test_list_animais_default_active_and_filter_other_status(
+    client: TestClient, db_session: Session
+) -> None:
+    ativo = Animal(
+        numero="A-01",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.VACA,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    abatido = Animal(
+        numero="AB-02",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.VACA,
+        status=StatusAnimalEnum.ABATIDO,
+    )
+    morto = Animal(
+        numero="M-03",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.VACA,
+        status=StatusAnimalEnum.MORTO,
+    )
+    db_session.add_all([ativo, abatido, morto])
+    db_session.commit()
+
+    # Por padrão (sem parâmetro status), traz apenas os ativos
+    default_resp = client.get("/")
+    assert default_resp.status_code == 200
+    assert "A-01" in default_resp.text
+    assert "AB-02" not in default_resp.text
+    assert "M-03" not in default_resp.text
+
+    # Filtrando por status=abatido
+    abatido_resp = client.get("/?status=abatido")
+    assert abatido_resp.status_code == 200
+    assert "AB-02" in abatido_resp.text
+    assert "A-01" not in abatido_resp.text
+    assert "M-03" not in abatido_resp.text
+
+    # Filtrando por "Todos os status" (status="")
+    all_resp = client.get("/?status=")
+    assert all_resp.status_code == 200
+    assert "A-01" in all_resp.text
+    assert "AB-02" in all_resp.text
+    assert "M-03" in all_resp.text
+
+
+
 def test_parse_helpers_and_schemas_validation() -> None:
     assert animais_parse_decimal(None) is None
     assert pesagens_parse_decimal(None) is None

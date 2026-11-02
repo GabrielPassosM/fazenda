@@ -33,7 +33,7 @@
                         name="fazenda"
                         required
                         onchange="recheckAllNumbers()"
-                        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                        class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm font-medium text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     >
                         {% for f in FazendaEnum %}
                         <option value="{{ f.value }}" {% if fazenda == f.value %}selected{% endif %}>

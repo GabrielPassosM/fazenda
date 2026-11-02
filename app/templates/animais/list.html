@@ -49,7 +49,7 @@
                     Fazenda
                 </label>
                 <select id="filter-fazenda" name="fazenda"
-                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                    class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
                     <option value="">Todas as fazendas</option>
                     {% for f in FazendaEnum %}
                     <option value="{{ f.value }}" {% if filters.fazenda==f.value %}selected{% endif %}>
@@ -65,7 +65,7 @@
                     Categoria
                 </label>
                 <select id="filter-categoria" name="categoria"
-                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                    class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
                     <option value="">Todas as categorias</option>
                     {% for c in CategoriaAnimalEnum %}
                     <option value="{{ c.value }}" {% if filters.categoria==c.value %}selected{% endif %}>
@@ -81,7 +81,7 @@
                     Status
                 </label>
                 <select id="filter-status" name="status"
-                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                    class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
                     <option value="">Todos os status</option>
                     {% for s in StatusAnimalEnum %}
                     <option value="{{ s.value }}" {% if filters.status==s.value %}selected{% endif %}>
@@ -96,7 +96,7 @@
                     class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer">
                     Filtrar
                 </button>
-                {% if filters.q or filters.fazenda or filters.categoria or filters.status %}
+                {% if filters.q or filters.fazenda or filters.categoria or filters.status != 'ativo' %}
                 <a href="/"
                     class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
                     Limpar
@@ -249,14 +249,14 @@
             </div>
             <h3 class="mt-3 text-base font-semibold text-slate-900">Nenhum animal encontrado</h3>
             <p class="mt-1 text-sm text-slate-500">
-                {% if filters.q or filters.fazenda or filters.categoria or filters.status %}
+                {% if filters.q or filters.fazenda or filters.categoria or filters.status != 'ativo' %}
                 Não há animais correspondentes aos filtros selecionados.
                 {% else %}
                 Comece cadastrando o primeiro animal do rebanho.
                 {% endif %}
             </p>
             <div class="mt-5 flex justify-center gap-3">
-                {% if filters.q or filters.fazenda or filters.categoria or filters.status %}
+                {% if filters.q or filters.fazenda or filters.categoria or filters.status != 'ativo' %}
                 <a href="/"
                     class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                     Limpar Filtros

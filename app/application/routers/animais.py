@@ -57,8 +57,11 @@ def list_animais(
         if categoria in CategoriaAnimalEnum._value2member_map_
         else None
     )
+    status_param = StatusAnimalEnum.ATIVO.value if status is None else status
     status_enum = (
-        StatusAnimalEnum(status) if status in StatusAnimalEnum._value2member_map_ else None
+        StatusAnimalEnum(status_param)
+        if status_param in StatusAnimalEnum._value2member_map_
+        else None
     )
 
     repo = AnimalRepository(db)
