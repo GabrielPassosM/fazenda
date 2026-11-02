@@ -12,6 +12,7 @@ from app.application.schemas.animal import AnimalCreate, AnimalUpdate
 from app.application.templating import templates
 from app.domain.models.enums import CategoriaAnimalEnum, FazendaEnum, StatusAnimalEnum
 from app.domain.repositories.animal_repository import AnimalRepository
+from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.use_cases.animal_use_cases import (
     create_animal,
     delete_animal,
@@ -38,6 +39,12 @@ def _parse_date(value: str | None) -> date | None:
     return date.fromisoformat(value.strip())
 
 
+def _parse_uuid(value: str | None) -> uuid.UUID | None:
+    if value is None or not value.strip():
+        return None
+    return uuid.UUID(value.strip())
+
+
 @router.get("/", response_class=HTMLResponse, summary="Listagem paginada de animais")
 @router.get("/animais", response_class=HTMLResponse, include_in_schema=False)
 def list_animais(
@@ -48,6 +55,7 @@ def list_animais(
     fazenda: str | None = Query(None),
     categoria: str | None = Query(None),
     status: str | None = Query(None),
+    pasto_id: str | None = Query(None),
     msg: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -63,8 +71,13 @@ def list_animais(
         if status_param in StatusAnimalEnum._value2member_map_
         else None
     )
+    try:
+        pasto_uuid = _parse_uuid(pasto_id)
+    except ValueError:
+        pasto_uuid = None
 
     repo = AnimalRepository(db)
+    pasto_repo = PastoRepository(db)
     paginated = repo.list_paginated(
         page=page,
         page_size=page_size,
@@ -72,6 +85,7 @@ def list_animais(
         fazenda=fazenda_enum,
         categoria=categoria_enum,
         status=status_enum,
+        pasto_id=pasto_uuid,
     )
 
     return templates.TemplateResponse(
@@ -79,11 +93,13 @@ def list_animais(
         name="animais/list.html",
         context={
             "paginated": paginated,
+            "pastos": pasto_repo.list_all(),
             "filters": {
                 "q": q or "",
                 "fazenda": fazenda_enum.value if fazenda_enum else "",
                 "categoria": categoria_enum.value if categoria_enum else "",
                 "status": status_enum.value if status_enum else "",
+                "pasto_id": str(pasto_uuid) if pasto_uuid else "",
             },
             "today": date.today().isoformat(),
             "msg": msg,
@@ -92,19 +108,25 @@ def list_animais(
 
 
 @router.get("/animais/novo", response_class=HTMLResponse, summary="Formulário de novo animal")
-def new_animal_form(request: Request) -> HTMLResponse:
+def new_animal_form(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
     today_str = date.today().isoformat()
+    pasto_repo = PastoRepository(db)
     return templates.TemplateResponse(
         request=request,
         name="animais/form.html",
         context={
             "is_edit": False,
+            "pastos": pasto_repo.list_all(),
             "form_data": {
                 "numero": "",
                 "fazenda": FazendaEnum.TIZIU.value,
                 "categoria": CategoriaAnimalEnum.BEZERRO.value,
                 "status": StatusAnimalEnum.ATIVO.value,
                 "data_entrada": today_str,
+                "pasto_id": "",
                 "observacoes": "",
                 "peso_inicial_kg": "",
                 "data_pesagem_inicial": today_str,
@@ -123,6 +145,7 @@ def create_animal_submit(
     categoria: str = Form(""),
     status: str = Form(StatusAnimalEnum.ATIVO.value),
     data_entrada: str = Form(""),
+    pasto_id: str = Form(""),
     observacoes: str = Form(""),
     peso_inicial_kg: str = Form(""),
     data_pesagem_inicial: str = Form(""),
@@ -135,6 +158,7 @@ def create_animal_submit(
         "categoria": categoria,
         "status": status,
         "data_entrada": data_entrada,
+        "pasto_id": pasto_id,
         "observacoes": observacoes,
         "peso_inicial_kg": peso_inicial_kg,
         "data_pesagem_inicial": data_pesagem_inicial,
@@ -147,6 +171,7 @@ def create_animal_submit(
         if dt_entrada is None:
             raise DomainError("A data de entrada é obrigatória.")
         dt_pesagem = _parse_date(data_pesagem_inicial) or dt_entrada
+        pasto_uuid = _parse_uuid(pasto_id)
 
         schema = AnimalCreate(
             numero=numero,
@@ -154,6 +179,7 @@ def create_animal_submit(
             categoria=CategoriaAnimalEnum(categoria),
             status=StatusAnimalEnum(status),
             data_entrada=dt_entrada,
+            pasto_id=pasto_uuid,
             observacoes=observacoes,
             peso_inicial_kg=peso_dec,
             data_pesagem_inicial=dt_pesagem if peso_dec is not None else None,
@@ -173,11 +199,13 @@ def create_animal_submit(
         else:
             error_msg = str(exc)
 
+        pasto_repo = PastoRepository(db)
         return templates.TemplateResponse(
             request=request,
             name="animais/form.html",
             context={
                 "is_edit": False,
+                "pastos": pasto_repo.list_all(),
                 "form_data": form_data,
                 "error": error_msg,
             },
@@ -236,18 +264,21 @@ def edit_animal_form(
     if animal is None:
         raise HTTPException(status_code=404, detail="Animal não encontrado.")
 
+    pasto_repo = PastoRepository(db)
     return templates.TemplateResponse(
         request=request,
         name="animais/form.html",
         context={
             "is_edit": True,
             "animal": animal,
+            "pastos": pasto_repo.list_all(),
             "form_data": {
                 "numero": animal.numero,
                 "fazenda": animal.fazenda.value,
                 "categoria": animal.categoria.value,
                 "status": animal.status.value,
                 "data_entrada": animal.data_entrada.isoformat(),
+                "pasto_id": str(animal.pasto_id) if animal.pasto_id else "",
                 "observacoes": animal.observacoes or "",
             },
             "error": None,
@@ -264,6 +295,7 @@ def update_animal_submit(
     categoria: str = Form(""),
     status: str = Form(""),
     data_entrada: str = Form(""),
+    pasto_id: str = Form(""),
     observacoes: str = Form(""),
     db: Session = Depends(get_db),
 ):
@@ -278,6 +310,7 @@ def update_animal_submit(
         "categoria": categoria,
         "status": status,
         "data_entrada": data_entrada,
+        "pasto_id": pasto_id,
         "observacoes": observacoes,
     }
 
@@ -285,6 +318,7 @@ def update_animal_submit(
         dt_entrada = _parse_date(data_entrada)
         if dt_entrada is None:
             raise DomainError("A data de entrada é obrigatória.")
+        pasto_uuid = _parse_uuid(pasto_id)
 
         schema = AnimalUpdate(
             numero=numero,
@@ -292,6 +326,7 @@ def update_animal_submit(
             categoria=CategoriaAnimalEnum(categoria),
             status=StatusAnimalEnum(status),
             data_entrada=dt_entrada,
+            pasto_id=pasto_uuid,
             observacoes=observacoes,
         )
         updated = update_animal(db, animal_id, schema)
@@ -306,12 +341,14 @@ def update_animal_submit(
         else:
             error_msg = str(exc)
 
+        pasto_repo = PastoRepository(db)
         return templates.TemplateResponse(
             request=request,
             name="animais/form.html",
             context={
                 "is_edit": True,
                 "animal": animal,
+                "pastos": pasto_repo.list_all(),
                 "form_data": form_data,
                 "error": error_msg,
             },

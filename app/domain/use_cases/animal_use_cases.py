@@ -6,6 +6,7 @@ from app.application.schemas.animal import AnimalCreate, AnimalUpdate
 from app.domain.models.animal import Animal
 from app.domain.models.pesagem import Pesagem
 from app.domain.repositories.animal_repository import AnimalRepository
+from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.repositories.pesagem_repository import PesagemRepository
 from app.domain.use_cases.exceptions import DomainError, NotFoundError
 
@@ -20,6 +21,11 @@ def create_animal(db: Session, data: AnimalCreate) -> Animal:
             f"Já existe um animal cadastrado com o número '{data.numero}' na fazenda {data.fazenda.label}."
         )
 
+    if data.pasto_id is not None:
+        pasto_repo = PastoRepository(db)
+        if pasto_repo.get_by_id(data.pasto_id) is None:
+            raise NotFoundError("Pasto não encontrado.")
+
     animal = Animal(
         numero=data.numero,
         fazenda=data.fazenda,
@@ -27,6 +33,7 @@ def create_animal(db: Session, data: AnimalCreate) -> Animal:
         categoria=data.categoria,
         status=data.status,
         observacoes=data.observacoes,
+        pasto_id=data.pasto_id,
     )
     animal_repo.create(animal)
 
@@ -56,12 +63,18 @@ def update_animal(db: Session, animal_id: uuid.UUID, data: AnimalUpdate) -> Anim
             f"Já existe outro animal com o número '{data.numero}' na fazenda {data.fazenda.label}."
         )
 
+    if data.pasto_id is not None:
+        pasto_repo = PastoRepository(db)
+        if pasto_repo.get_by_id(data.pasto_id) is None:
+            raise NotFoundError("Pasto não encontrado.")
+
     animal.numero = data.numero
     animal.fazenda = data.fazenda
     animal.data_entrada = data.data_entrada
     animal.categoria = data.categoria
     animal.status = data.status
     animal.observacoes = data.observacoes
+    animal.pasto_id = data.pasto_id
 
     db.commit()
     db.refresh(animal)

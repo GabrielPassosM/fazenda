@@ -17,7 +17,7 @@ class AnimalRepository:
     def get_by_id(self, animal_id: uuid.UUID) -> Animal | None:
         stmt = (
             select(Animal)
-            .options(selectinload(Animal.pesagens))
+            .options(selectinload(Animal.pesagens), selectinload(Animal.pasto))
             .where(Animal.id == animal_id)
         )
         return self.db.scalar(stmt)
@@ -52,6 +52,7 @@ class AnimalRepository:
         fazenda: FazendaEnum | None = None,
         categoria: CategoriaAnimalEnum | None = None,
         status: StatusAnimalEnum | None = None,
+        pasto_id: uuid.UUID | None = None,
     ) -> PaginatedAnimais:
         page = max(1, page)
         page_size = max(1, min(page_size, 100))
@@ -65,6 +66,8 @@ class AnimalRepository:
             filters.append(Animal.categoria == categoria)
         if status:
             filters.append(Animal.status == status)
+        if pasto_id:
+            filters.append(Animal.pasto_id == pasto_id)
 
         count_stmt = select(func.count(Animal.id))
         if filters:
@@ -95,6 +98,7 @@ class AnimalRepository:
                 latest_pesagem_subq.c.ultimo_peso_kg,
                 latest_pesagem_subq.c.ultima_data_pesagem,
             )
+            .options(selectinload(Animal.pasto))
             .outerjoin(
                 latest_pesagem_subq,
                 and_(

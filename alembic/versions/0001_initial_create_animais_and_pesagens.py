@@ -1,4 +1,4 @@
-"""create animais and pesagens tables
+"""create pastos, animais and pesagens tables
 
 Revision ID: 0001_initial
 Revises: 
@@ -19,6 +19,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    op.create_table(
+        "pastos",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("nome", sa.String(length=100), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("nome", name="uq_pastos_nome"),
+    )
+    op.create_index(op.f("ix_pastos_nome"), "pastos", ["nome"], unique=False)
+
     op.create_table(
         "animais",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -61,12 +70,15 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("observacoes", sa.Text(), nullable=True),
+        sa.Column("pasto_id", sa.Uuid(), nullable=True),
+        sa.ForeignKeyConstraint(["pasto_id"], ["pastos.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("fazenda", "numero", name="uq_animais_fazenda_numero"),
     )
     op.create_index(op.f("ix_animais_categoria"), "animais", ["categoria"], unique=False)
     op.create_index(op.f("ix_animais_fazenda"), "animais", ["fazenda"], unique=False)
     op.create_index(op.f("ix_animais_numero"), "animais", ["numero"], unique=False)
+    op.create_index(op.f("ix_animais_pasto_id"), "animais", ["pasto_id"], unique=False)
     op.create_index(op.f("ix_animais_status"), "animais", ["status"], unique=False)
 
     op.create_table(
@@ -88,8 +100,11 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_pesagens_animal_id"), table_name="pesagens")
     op.drop_table("pesagens")
     op.drop_index(op.f("ix_animais_status"), table_name="animais")
+    op.drop_index(op.f("ix_animais_pasto_id"), table_name="animais")
     op.drop_index(op.f("ix_animais_numero"), table_name="animais")
     op.drop_index(op.f("ix_animais_fazenda"), table_name="animais")
     op.drop_index(op.f("ix_animais_categoria"), table_name="animais")
     op.drop_table("animais")
+    op.drop_index(op.f("ix_pastos_nome"), table_name="pastos")
+    op.drop_table("pastos")
 

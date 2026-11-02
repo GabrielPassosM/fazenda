@@ -1,3 +1,3 @@
-from app.application.routers import animais, health, pesagens
+from app.application.routers import animais, health, pastos, pesagens
 
-__all__ = ["animais", "health", "pesagens"]
+__all__ = ["animais", "health", "pastos", "pesagens"]

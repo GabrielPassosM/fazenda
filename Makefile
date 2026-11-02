@@ -25,8 +25,8 @@ start: ## Sobe o Docker Compose, aplica as migrações do Alembic e popula o ban
 seed: ## Popula o banco de dados local com registros iniciais de exemplo
 	$(POETRY) run python -m app.infrastructure.seed
 
-down: ## Para e remove os containers locais
-	docker compose down
+down: ## Para e remove os containers e volumes locais
+	docker compose down -v
 
 migrate: ## Aplica todas as migrações pendentes no banco de dados (alembic upgrade head)
 	$(POETRY) run alembic upgrade head

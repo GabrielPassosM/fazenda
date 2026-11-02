@@ -114,6 +114,24 @@
                         class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     >
                 </div>
+
+                <div>
+                    <label for="pasto_id" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                        Pasto (opcional)
+                    </label>
+                    <select
+                        id="pasto_id"
+                        name="pasto_id"
+                        class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                    >
+                        <option value="">Sem pasto definido</option>
+                        {% for p in pastos %}
+                        <option value="{{ p.id }}" {% if form_data.pasto_id == (p.id | string) %}selected{% endif %}>
+                            {{ p.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <div>

@@ -759,5 +759,174 @@ def test_seed_database_idempotent(
     assert pesagens_2 == 0
 
 
+def test_pasto_crud_and_animal_relationship(
+    client: TestClient, db_session: Session
+) -> None:
+    from app.application.schemas.pasto import PastoCreate, PastoUpdate
+    from app.domain.repositories.pasto_repository import PastoRepository
+    from app.domain.use_cases.animal_use_cases import create_animal
+    from app.domain.use_cases.pasto_use_cases import (
+        create_pasto,
+        delete_pasto,
+        update_pasto,
+    )
+
+    # Lista vazia inicialmente
+    empty_resp = client.get("/pastos")
+    assert empty_resp.status_code == 200
+    assert "Nenhum pasto cadastrado" in empty_resp.text
+
+    # Cadastra pasto via POST
+    create_resp = client.post(
+        "/pastos/novo",
+        data={"nome": "Pasto da Represa"},
+        follow_redirects=True,
+    )
+    assert create_resp.status_code == 200
+    assert "Pasto da Represa" in create_resp.text
+
+    pasto_repo = PastoRepository(db_session)
+    pasto1 = pasto_repo.get_by_nome("Pasto da Represa")
+    assert pasto1 is not None
+
+    # Duplicado no cadastro -> 422 DomainError
+    dup_resp = client.post("/pastos/novo", data={"nome": "Pasto da Represa"})
+    assert dup_resp.status_code == 422
+    assert "Já existe um pasto cadastrado" in dup_resp.text
+
+    # Nome inválido (em branco) -> 422 ValidationError
+    blank_resp = client.post("/pastos/novo", data={"nome": "   "})
+    assert blank_resp.status_code == 422
+
+    # Cadastra segundo pasto
+    pasto2 = create_pasto(db_session, PastoCreate(nome="Pasto da Baixada"))
+
+    # Formulário de edição de pasto
+    edit_form = client.get(f"/pastos/{pasto1.id}/editar")
+    assert edit_form.status_code == 200
+    assert "Pasto da Represa" in edit_form.text
+
+    # Edição com sucesso
+    edit_ok = client.post(
+        f"/pastos/{pasto1.id}/editar",
+        data={"nome": "Pasto da Represa Novo"},
+        follow_redirects=True,
+    )
+    assert edit_ok.status_code == 200
+    assert "Pasto da Represa Novo" in edit_ok.text
+
+    # Edição duplicando nome de outro pasto -> 422 DomainError
+    edit_dup = client.post(
+        f"/pastos/{pasto1.id}/editar",
+        data={"nome": "Pasto da Baixada"},
+    )
+    assert edit_dup.status_code == 422
+    assert "Já existe outro pasto" in edit_dup.text
+
+    # Edição com nome em branco -> 422 ValidationError
+    edit_blank = client.post(
+        f"/pastos/{pasto1.id}/editar",
+        data={"nome": "   "},
+    )
+    assert edit_blank.status_code == 422
+
+    # Rotas com pasto inexistente -> 404
+    fake_pasto_id = uuid.uuid4()
+    assert client.get(f"/pastos/{fake_pasto_id}/editar").status_code == 404
+    assert client.post(f"/pastos/{fake_pasto_id}/editar", data={"nome": "X"}).status_code == 404
+    assert client.post(f"/pastos/{fake_pasto_id}/excluir").status_code == 404
+
+    with pytest.raises(NotFoundError):
+        update_pasto(db_session, fake_pasto_id, PastoUpdate(nome="Inexistente"))
+    with pytest.raises(NotFoundError):
+        delete_pasto(db_session, fake_pasto_id)
+
+    # Cadastra animal vinculado ao pasto1 via rota
+    animal_resp = client.post(
+        "/animais/novo",
+        data={
+            "numero": "901",
+            "fazenda": "tiziu",
+            "categoria": "novilha",
+            "status": "ativo",
+            "data_entrada": "2026-10-01",
+            "pasto_id": str(pasto1.id),
+        },
+        follow_redirects=True,
+    )
+    assert animal_resp.status_code == 200
+    assert "Pasto da Represa Novo" in animal_resp.text
+
+    # Filtra listagem de animais por pasto_id válido e inválido
+    filter_ok = client.get(f"/?pasto_id={pasto1.id}")
+    assert filter_ok.status_code == 200
+    assert "901" in filter_ok.text
+
+    filter_other = client.get(f"/?pasto_id={pasto2.id}")
+    assert filter_other.status_code == 200
+    assert "901" not in filter_other.text
+
+    filter_invalid_uuid = client.get("/?pasto_id=uuid-invalido")
+    assert filter_invalid_uuid.status_code == 200
+    assert "901" in filter_invalid_uuid.text
+
+    # Edita animal trocando para pasto2
+    animal_repo = AnimalRepository(db_session)
+    animal_901 = animal_repo.get_by_fazenda_and_numero(FazendaEnum.TIZIU, "901")
+    assert animal_901 is not None
+    assert animal_901.pasto_id == pasto1.id
+
+    upd_animal_resp = client.post(
+        f"/animais/{animal_901.id}/editar",
+        data={
+            "numero": "901",
+            "fazenda": "tiziu",
+            "categoria": "novilha",
+            "status": "ativo",
+            "data_entrada": "2026-10-01",
+            "pasto_id": str(pasto2.id),
+        },
+        follow_redirects=True,
+    )
+    assert upd_animal_resp.status_code == 200
+    assert "Pasto da Baixada" in upd_animal_resp.text
+
+    # Exclui pasto2 e verifica que o animal continua existindo mas com pasto_id=None
+    del_pasto_resp = client.post(f"/pastos/{pasto2.id}/excluir", follow_redirects=True)
+    assert del_pasto_resp.status_code == 200
+    db_session.expire_all()
+    animal_after = animal_repo.get_by_id(animal_901.id)
+    assert animal_after is not None
+    assert animal_after.pasto_id is None
+
+    # Use cases de animal com pasto_id inexistente -> NotFoundError
+    with pytest.raises(NotFoundError):
+        create_animal(
+            db_session,
+            AnimalCreate(
+                numero="999",
+                fazenda=FazendaEnum.TIZIU,
+                data_entrada=date(2026, 10, 1),
+                categoria=CategoriaAnimalEnum.BEZERRO,
+                pasto_id=uuid.uuid4(),
+            ),
+        )
+
+    with pytest.raises(NotFoundError):
+        update_animal(
+            db_session,
+            animal_901.id,
+            AnimalUpdate(
+                numero="901",
+                fazenda=FazendaEnum.TIZIU,
+                data_entrada=date(2026, 10, 1),
+                categoria=CategoriaAnimalEnum.NOVILHA,
+                status=StatusAnimalEnum.ATIVO,
+                pasto_id=uuid.uuid4(),
+            ),
+        )
+
+
+
 
 

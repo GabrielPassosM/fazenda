@@ -33,7 +33,7 @@
 
     <!-- Barra de Filtros -->
     <form method="get" action="/" class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <div>
                 <label for="filter-q" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                     Número do Animal
@@ -54,6 +54,22 @@
                     {% for f in FazendaEnum %}
                     <option value="{{ f.value }}" {% if filters.fazenda==f.value %}selected{% endif %}>
                         {{ f.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="filter-pasto"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                    Pasto
+                </label>
+                <select id="filter-pasto" name="pasto_id"
+                    class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                    <option value="">Todos os pastos</option>
+                    {% for p in pastos %}
+                    <option value="{{ p.id }}" {% if filters.pasto_id==(p.id | string) %}selected{% endif %}>
+                        {{ p.nome }}
                     </option>
                     {% endfor %}
                 </select>
@@ -96,7 +112,7 @@
                     class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer">
                     Filtrar
                 </button>
-                {% if filters.q or filters.fazenda or filters.categoria or filters.status != 'ativo' %}
+                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' %}
                 <a href="/"
                     class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
                     Limpar
@@ -115,6 +131,7 @@
                     <tr>
                         <th scope="col" class="w-28 whitespace-nowrap px-4 py-3.5 sm:px-6">Nº Animal</th>
                         <th scope="col" class="px-4 py-3.5">Fazenda</th>
+                        <th scope="col" class="px-4 py-3.5">Pasto</th>
                         <th scope="col" class="px-4 py-3.5">Categoria</th>
                         <th scope="col" class="px-4 py-3.5">Data Entrada</th>
                         <th scope="col" class="px-4 py-3.5">Último Peso</th>
@@ -138,6 +155,14 @@
                                 class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium {% if animal.fazenda.value == 'tiziu' %}bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-600/20{% else %}bg-indigo-50 text-indigo-800 ring-1 ring-inset ring-indigo-600/20{% endif %}">
                                 {{ animal.fazenda.label }}
                             </span>
+                        </td>
+
+                        <td class="whitespace-nowrap px-4 py-3.5 text-slate-700">
+                            {% if animal.pasto %}
+                            <span class="font-medium text-slate-800">{{ animal.pasto.nome }}</span>
+                            {% else %}
+                            <span class="text-xs italic text-slate-400">—</span>
+                            {% endif %}
                         </td>
 
                         <td class="whitespace-nowrap px-4 py-3.5 font-medium text-slate-800">
@@ -203,7 +228,7 @@
         </div>
 
         <!-- Rodapé com Paginação -->
-        {% set query_params = "&q=" ~ (filters.q | urlencode) ~ "&fazenda=" ~ filters.fazenda ~ "&categoria=" ~
+        {% set query_params = "&q=" ~ (filters.q | urlencode) ~ "&fazenda=" ~ filters.fazenda ~ "&pasto_id=" ~ filters.pasto_id ~ "&categoria=" ~
         filters.categoria ~ "&status=" ~ filters.status %}
         <div
             class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:px-6">
@@ -249,14 +274,14 @@
             </div>
             <h3 class="mt-3 text-base font-semibold text-slate-900">Nenhum animal encontrado</h3>
             <p class="mt-1 text-sm text-slate-500">
-                {% if filters.q or filters.fazenda or filters.categoria or filters.status != 'ativo' %}
+                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' %}
                 Não há animais correspondentes aos filtros selecionados.
                 {% else %}
                 Comece cadastrando o primeiro animal do rebanho.
                 {% endif %}
             </p>
             <div class="mt-5 flex justify-center gap-3">
-                {% if filters.q or filters.fazenda or filters.categoria or filters.status != 'ativo' %}
+                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' %}
                 <a href="/"
                     class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                     Limpar Filtros

@@ -4,6 +4,11 @@ from app.domain.use_cases.animal_use_cases import (
     update_animal,
 )
 from app.domain.use_cases.exceptions import DomainError, NotFoundError
+from app.domain.use_cases.pasto_use_cases import (
+    create_pasto,
+    delete_pasto,
+    update_pasto,
+)
 from app.domain.use_cases.pesagem_use_cases import (
     create_pesagem_individual,
     create_pesagens_em_lote,
@@ -16,6 +21,9 @@ __all__ = [
     "create_animal",
     "update_animal",
     "delete_animal",
+    "create_pasto",
+    "update_pasto",
+    "delete_pasto",
     "create_pesagem_individual",
     "create_pesagens_em_lote",
     "delete_pesagem",

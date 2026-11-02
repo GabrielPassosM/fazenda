@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -15,6 +16,7 @@ class AnimalCreate(BaseModel):
     categoria: CategoriaAnimalEnum
     status: StatusAnimalEnum = StatusAnimalEnum.ATIVO
     observacoes: str | None = None
+    pasto_id: uuid.UUID | None = None
 
     peso_inicial_kg: Decimal | None = None
     data_pesagem_inicial: date | None = None
@@ -51,6 +53,7 @@ class AnimalUpdate(BaseModel):
     categoria: CategoriaAnimalEnum
     status: StatusAnimalEnum
     observacoes: str | None = None
+    pasto_id: uuid.UUID | None = None
 
     @field_validator("numero")
     @classmethod

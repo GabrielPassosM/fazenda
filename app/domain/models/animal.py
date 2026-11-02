@@ -2,13 +2,14 @@ from datetime import date
 from typing import TYPE_CHECKING
 import uuid
 
-from sqlalchemy import Date, Enum as SAEnum, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Date, Enum as SAEnum, ForeignKey, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.models.base import Base
 from app.domain.models.enums import CategoriaAnimalEnum, FazendaEnum, StatusAnimalEnum
 
 if TYPE_CHECKING:
+    from app.domain.models.pasto import Pasto
     from app.domain.models.pesagem import Pesagem
 
 
@@ -74,7 +75,17 @@ class Animal(Base):
         Text,
         nullable=True,
     )
+    pasto_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("pastos.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
+    pasto: Mapped["Pasto | None"] = relationship(
+        "Pasto",
+        back_populates="animais",
+    )
     pesagens: Mapped[list["Pesagem"]] = relationship(
         "Pesagem",
         back_populates="animal",

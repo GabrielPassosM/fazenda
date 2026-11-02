@@ -6,13 +6,26 @@ from sqlalchemy.orm import Session
 
 from app.domain.models.animal import Animal
 from app.domain.models.enums import CategoriaAnimalEnum, FazendaEnum, StatusAnimalEnum
+from app.domain.models.pasto import Pasto
 from app.domain.models.pesagem import Pesagem
 from app.domain.repositories.animal_repository import AnimalRepository
+from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.repositories.pesagem_repository import PesagemRepository
 from app.infrastructure.database import SessionLocal
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def get_seed_pastos() -> list[str]:
+    """Retorna os nomes dos pastos iniciais para seed."""
+    return [
+        "Pasto da Represa",
+        "Pasto da Baixada",
+        "Pasto Curral",
+        "Piquete Rotacionado 1",
+        "Piquete Maternidade",
+    ]
 
 
 def get_seed_data() -> list[dict]:
@@ -30,6 +43,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.BEZERRO,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(120),
+            "pasto": "Pasto Curral",
             "observacoes": "Nascido na propriedade. Pelagem nelore padrão.",
             "pesagens": [
                 {"data_pesagem": days_ago(120), "peso_kg": Decimal("185.00"), "observacao": "Peso na desmama"},
@@ -43,6 +57,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.BEZERRO,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(95),
+            "pasto": "Piquete Rotacionado 1",
             "observacoes": "Lote de reposição.",
             "pesagens": [
                 {"data_pesagem": days_ago(95), "peso_kg": Decimal("192.00"), "observacao": "Peso de entrada"},
@@ -206,11 +221,19 @@ def get_seed_data() -> list[dict]:
 
 def seed_database(db: Session) -> tuple[int, int]:
     """
-    Popula o banco de dados com registros iniciais de animais e pesagens de forma idempotente.
+    Popula o banco de dados com registros iniciais de pastos, animais e pesagens de forma idempotente.
     Retorna a tupla (animais_criados, pesagens_criadas).
     """
+    pasto_repo = PastoRepository(db)
     animal_repo = AnimalRepository(db)
     pesagem_repo = PesagemRepository(db)
+
+    pastos_map: dict[str, Pasto] = {}
+    for nome_pasto in get_seed_pastos():
+        pasto_obj = pasto_repo.get_by_nome(nome_pasto)
+        if pasto_obj is None:
+            pasto_obj = pasto_repo.create(Pasto(nome=nome_pasto))
+        pastos_map[nome_pasto] = pasto_obj
 
     animais_criados = 0
     pesagens_criadas = 0
@@ -220,12 +243,16 @@ def seed_database(db: Session) -> tuple[int, int]:
         if existing is not None:
             continue
 
+        pasto_nome = item.get("pasto")
+        pasto_ref = pastos_map.get(pasto_nome) if pasto_nome else None
+
         animal = Animal(
             numero=item["numero"],
             fazenda=item["fazenda"],
             categoria=item["categoria"],
             status=item["status"],
             data_entrada=item["data_entrada"],
+            pasto_id=pasto_ref.id if pasto_ref else None,
             observacoes=item["observacoes"],
         )
         animal_repo.create(animal)

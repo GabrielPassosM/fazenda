@@ -61,10 +61,17 @@
     </div>
 
     <!-- Resumo Cadastral + Indicador de Peso -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
             <span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Categoria</span>
             <span class="mt-1 block text-lg font-bold text-slate-900">{{ animal.categoria.label }}</span>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+            <span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Pasto</span>
+            <span class="mt-1 block text-lg font-bold text-slate-900">
+                {{ animal.pasto.nome if animal.pasto else "—" }}
+            </span>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
