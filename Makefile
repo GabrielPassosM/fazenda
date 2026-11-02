@@ -1,4 +1,4 @@
-.PHONY: help install run test up down start migrate revision
+.PHONY: help install run test up down start migrate revision seed
 
 POETRY ?= poetry
 
@@ -17,9 +17,13 @@ test: ## Executa a suíte de testes automatizados com Pytest e relatório de cob
 up: ## Sobe os containers locais (app + PostgreSQL 17) em background
 	docker compose up --build -d
 
-start: ## Sobe o Docker Compose e aplica as migrações do Alembic (sistema pronto para uso)
+start: ## Sobe o Docker Compose, aplica as migrações do Alembic e popula o banco local (seed)
 	docker compose up --build -d
 	docker compose exec app alembic upgrade head
+	docker compose exec app python -m app.infrastructure.seed
+
+seed: ## Popula o banco de dados local com registros iniciais de exemplo
+	$(POETRY) run python -m app.infrastructure.seed
 
 down: ## Para e remove os containers locais
 	docker compose down

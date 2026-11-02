@@ -685,3 +685,17 @@ def test_pesagens_router_and_htmx_branches(
     assert "text-amber-700" in htmx_inactive.text
 
 
+def test_seed_database_idempotent(db_session: Session) -> None:
+    from app.infrastructure.seed import seed_database
+
+    animais_1, pesagens_1 = seed_database(db_session)
+    assert animais_1 > 0
+    assert pesagens_1 > 0
+
+    # Segunda execução deve ser idempotente e não duplicar registros
+    animais_2, pesagens_2 = seed_database(db_session)
+    assert animais_2 == 0
+    assert pesagens_2 == 0
+
+
+
