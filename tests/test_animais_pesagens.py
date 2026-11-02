@@ -45,7 +45,8 @@ def test_create_animal_with_initial_weight_and_list(client: TestClient) -> None:
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert "#101" in resp.text
+    assert "101" in resp.text
+    assert "Lote A" not in resp.text
     assert "285,50 kg" in resp.text
     assert "Novilha" in resp.text
     assert "Tiziu" in resp.text
@@ -206,7 +207,8 @@ def test_edit_and_delete_animal(client: TestClient, db_session: Session) -> None
     # Exclui o animal
     del_resp = client.post(f"/animais/{animal.id}/excluir", follow_redirects=True)
     assert del_resp.status_code == 200
-    assert "#500" not in del_resp.text
+    assert f"/animais/{animal.id}" not in del_resp.text
+    assert "Nenhum animal encontrado" in del_resp.text
 
 
 def test_pagination_animais(client: TestClient, db_session: Session) -> None:
@@ -685,17 +687,27 @@ def test_pesagens_router_and_htmx_branches(
     assert "text-amber-700" in htmx_inactive.text
 
 
-def test_seed_database_idempotent(db_session: Session) -> None:
-    from app.infrastructure.seed import seed_database
+def test_seed_database_idempotent(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import runpy
 
-    animais_1, pesagens_1 = seed_database(db_session)
-    assert animais_1 > 0
-    assert pesagens_1 > 0
+    from app.infrastructure import seed
+    from tests.conftest import TestingSessionLocal
 
-    # Segunda execução deve ser idempotente e não duplicar registros
-    animais_2, pesagens_2 = seed_database(db_session)
+    monkeypatch.setattr("app.infrastructure.database.SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(seed, "SessionLocal", TestingSessionLocal)
+
+    # Primeira execução via main() insere os registros iniciais
+    seed.main()
+
+    # Segunda execução via __main__ deve ser idempotente e não duplicar registros
+    runpy.run_path(seed.__file__, run_name="__main__")
+
+    animais_2, pesagens_2 = seed.seed_database(db_session)
     assert animais_2 == 0
     assert pesagens_2 == 0
+
 
 
 

@@ -12,7 +12,7 @@
             ← {{ "Voltar para detalhes do animal" if is_edit else "Voltar para a listagem do rebanho" }}
         </a>
         <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-            {{ "Editar Animal #" ~ animal.numero if is_edit else "Cadastrar Novo Animal" }}
+            {{ "Editar Animal " ~ animal.numero if is_edit else "Cadastrar Novo Animal" }}
         </h1>
         <p class="mt-1 text-sm text-slate-600">
             {{ "Atualize as informações cadastrais e status do animal." if is_edit else "Preencha os dados do animal. Você também pode registrar o peso inicial no mesmo passo." }}

@@ -9,7 +9,8 @@
         <div>
             <div class="flex items-center gap-2.5">
                 <h1 class="text-2xl font-bold tracking-tight text-slate-900">Animais do Rebanho</h1>
-                <span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                <span
+                    class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
                     {{ paginated.total }} {{ "animal" if paginated.total == 1 else "animais" }}
                 </span>
             </div>
@@ -19,16 +20,12 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-            <a
-                href="/pesagens/lote{% if filters.fazenda %}?fazenda={{ filters.fazenda }}{% endif %}"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50"
-            >
+            <a href="/pesagens/lote{% if filters.fazenda %}?fazenda={{ filters.fazenda }}{% endif %}"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50">
                 ⚖️ Pesagem em Lote
             </a>
-            <a
-                href="/animais/novo"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-2xs transition hover:bg-emerald-800"
-            >
+            <a href="/animais/novo"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-2xs transition hover:bg-emerald-800">
                 + Cadastrar Animal
             </a>
         </div>
@@ -41,28 +38,21 @@
                 <label for="filter-q" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                     Número do Animal
                 </label>
-                <input
-                    id="filter-q"
-                    type="text"
-                    name="q"
-                    value="{{ filters.q }}"
+                <input id="filter-q" type="text" name="q" value="{{ filters.q }}"
                     placeholder="Buscar por nº (ex: 104)..."
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                >
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
             </div>
 
             <div>
-                <label for="filter-fazenda" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <label for="filter-fazenda"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                     Fazenda
                 </label>
-                <select
-                    id="filter-fazenda"
-                    name="fazenda"
-                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                >
+                <select id="filter-fazenda" name="fazenda"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
                     <option value="">Todas as fazendas</option>
                     {% for f in FazendaEnum %}
-                    <option value="{{ f.value }}" {% if filters.fazenda == f.value %}selected{% endif %}>
+                    <option value="{{ f.value }}" {% if filters.fazenda==f.value %}selected{% endif %}>
                         {{ f.label }}
                     </option>
                     {% endfor %}
@@ -70,17 +60,15 @@
             </div>
 
             <div>
-                <label for="filter-categoria" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <label for="filter-categoria"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                     Categoria
                 </label>
-                <select
-                    id="filter-categoria"
-                    name="categoria"
-                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                >
+                <select id="filter-categoria" name="categoria"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
                     <option value="">Todas as categorias</option>
                     {% for c in CategoriaAnimalEnum %}
-                    <option value="{{ c.value }}" {% if filters.categoria == c.value %}selected{% endif %}>
+                    <option value="{{ c.value }}" {% if filters.categoria==c.value %}selected{% endif %}>
                         {{ c.label }}
                     </option>
                     {% endfor %}
@@ -88,17 +76,15 @@
             </div>
 
             <div>
-                <label for="filter-status" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <label for="filter-status"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                     Status
                 </label>
-                <select
-                    id="filter-status"
-                    name="status"
-                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                >
+                <select id="filter-status" name="status"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
                     <option value="">Todos os status</option>
                     {% for s in StatusAnimalEnum %}
-                    <option value="{{ s.value }}" {% if filters.status == s.value %}selected{% endif %}>
+                    <option value="{{ s.value }}" {% if filters.status==s.value %}selected{% endif %}>
                         {{ s.label }}
                     </option>
                     {% endfor %}
@@ -106,17 +92,13 @@
             </div>
 
             <div class="flex items-end gap-2">
-                <button
-                    type="submit"
-                    class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer"
-                >
+                <button type="submit"
+                    class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer">
                     Filtrar
                 </button>
                 {% if filters.q or filters.fazenda or filters.categoria or filters.status %}
-                <a
-                    href="/"
-                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                >
+                <a href="/"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
                     Limpar
                 </a>
                 {% endif %}
@@ -131,7 +113,7 @@
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th scope="col" class="px-4 py-3.5 sm:px-6">Nº Animal</th>
+                        <th scope="col" class="w-28 whitespace-nowrap px-4 py-3.5 sm:px-6">Nº Animal</th>
                         <th scope="col" class="px-4 py-3.5">Fazenda</th>
                         <th scope="col" class="px-4 py-3.5">Categoria</th>
                         <th scope="col" class="px-4 py-3.5">Data Entrada</th>
@@ -144,22 +126,16 @@
                     {% for item in paginated.items %}
                     {% set animal = item.animal %}
                     <tr class="transition hover:bg-slate-50/80">
-                        <td class="whitespace-nowrap px-4 py-3.5 sm:px-6">
-                            <a
-                                href="/animais/{{ animal.id }}"
-                                class="inline-flex items-center gap-1.5 font-mono text-base font-bold text-emerald-800 hover:text-emerald-950 hover:underline"
-                            >
-                                #{{ animal.numero }}
+                        <td class="w-28 whitespace-nowrap px-4 py-3.5 sm:px-6">
+                            <a href="/animais/{{ animal.id }}"
+                                class="inline-flex items-center gap-1.5 font-mono text-base font-bold text-emerald-800 hover:text-emerald-950 hover:underline">
+                                {{ animal.numero }}
                             </a>
-                            {% if animal.observacoes %}
-                            <p class="mt-0.5 max-w-xs truncate text-xs text-slate-500" title="{{ animal.observacoes }}">
-                                {{ animal.observacoes }}
-                            </p>
-                            {% endif %}
                         </td>
 
                         <td class="whitespace-nowrap px-4 py-3.5">
-                            <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium {% if animal.fazenda.value == 'tiziu' %}bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-600/20{% else %}bg-indigo-50 text-indigo-800 ring-1 ring-inset ring-indigo-600/20{% endif %}">
+                            <span
+                                class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium {% if animal.fazenda.value == 'tiziu' %}bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-600/20{% else %}bg-indigo-50 text-indigo-800 ring-1 ring-inset ring-indigo-600/20{% endif %}">
                                 {{ animal.fazenda.label }}
                             </span>
                         </td>
@@ -187,17 +163,20 @@
 
                         <td class="whitespace-nowrap px-4 py-3.5">
                             {% if animal.status.value == 'ativo' %}
-                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                            <span
+                                class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
                                 <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
                                 {{ animal.status.label }}
                             </span>
                             {% elif animal.status.value == 'abatido' %}
-                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                            <span
+                                class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">
                                 <span class="h-1.5 w-1.5 rounded-full bg-amber-600"></span>
                                 {{ animal.status.label }}
                             </span>
                             {% else %}
-                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-500/20">
+                            <span
+                                class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-500/20">
                                 <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
                                 {{ animal.status.label }}
                             </span>
@@ -206,17 +185,13 @@
 
                         <td class="whitespace-nowrap px-4 py-3.5 text-right sm:px-6">
                             <div class="inline-flex items-center gap-2">
-                                <button
-                                    type="button"
+                                <button type="button"
                                     onclick="openQuickPesagemModal('{{ animal.id }}', '{{ animal.numero }}', '{{ animal.fazenda.label }}')"
-                                    class="rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 cursor-pointer"
-                                >
+                                    class="rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 cursor-pointer">
                                     + Pesar
                                 </button>
-                                <a
-                                    href="/animais/{{ animal.id }}"
-                                    class="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
+                                <a href="/animais/{{ animal.id }}"
+                                    class="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
                                     Detalhes
                                 </a>
                             </div>
@@ -228,36 +203,37 @@
         </div>
 
         <!-- Rodapé com Paginação -->
-        {% set query_params = "&q=" ~ (filters.q | urlencode) ~ "&fazenda=" ~ filters.fazenda ~ "&categoria=" ~ filters.categoria ~ "&status=" ~ filters.status %}
-        <div class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:px-6">
+        {% set query_params = "&q=" ~ (filters.q | urlencode) ~ "&fazenda=" ~ filters.fazenda ~ "&categoria=" ~
+        filters.categoria ~ "&status=" ~ filters.status %}
+        <div
+            class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:px-6">
             <div class="text-xs text-slate-600">
-                Página <span class="font-semibold text-slate-900">{{ paginated.page }}</span> de <span class="font-semibold text-slate-900">{{ paginated.total_pages }}</span>
+                Página <span class="font-semibold text-slate-900">{{ paginated.page }}</span> de <span
+                    class="font-semibold text-slate-900">{{ paginated.total_pages }}</span>
                 ({{ paginated.total }} registros no total)
             </div>
 
             <div class="inline-flex items-center gap-1.5">
                 {% if paginated.has_prev %}
-                <a
-                    href="/?page={{ paginated.page - 1 }}{{ query_params }}"
-                    class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
+                <a href="/?page={{ paginated.page - 1 }}{{ query_params }}"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
                     ← Anterior
                 </a>
                 {% else %}
-                <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed">
+                <span
+                    class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed">
                     ← Anterior
                 </span>
                 {% endif %}
 
                 {% if paginated.has_next %}
-                <a
-                    href="/?page={{ paginated.page + 1 }}{{ query_params }}"
-                    class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                >
+                <a href="/?page={{ paginated.page + 1 }}{{ query_params }}"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
                     Próxima →
                 </a>
                 {% else %}
-                <span class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed">
+                <span
+                    class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed">
                     Próxima →
                 </span>
                 {% endif %}
@@ -267,7 +243,8 @@
         {% else %}
         <!-- Estado vazio -->
         <div class="px-6 py-12 text-center">
-            <div class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 text-xl font-bold">
+            <div
+                class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 text-xl font-bold">
                 🐄
             </div>
             <h3 class="mt-3 text-base font-semibold text-slate-900">Nenhum animal encontrado</h3>
@@ -280,17 +257,13 @@
             </p>
             <div class="mt-5 flex justify-center gap-3">
                 {% if filters.q or filters.fazenda or filters.categoria or filters.status %}
-                <a
-                    href="/"
-                    class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
+                <a href="/"
+                    class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                     Limpar Filtros
                 </a>
                 {% endif %}
-                <a
-                    href="/animais/novo"
-                    class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-2xs hover:bg-emerald-800"
-                >
+                <a href="/animais/novo"
+                    class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-2xs hover:bg-emerald-800">
                     + Cadastrar Animal
                 </a>
             </div>
@@ -300,10 +273,8 @@
 </div>
 
 <!-- Modal Rápido para Pesagem Individual direto na Listagem -->
-<div
-    id="quick-pesagem-modal"
-    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4 backdrop-blur-2xs"
->
+<div id="quick-pesagem-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4 backdrop-blur-2xs">
     <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
@@ -312,73 +283,51 @@
                 </h3>
                 <p id="modal-animal-fazenda" class="text-xs text-slate-500"></p>
             </div>
-            <button
-                type="button"
-                onclick="closeQuickPesagemModal()"
-                class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
-            >
+            <button type="button" onclick="closeQuickPesagemModal()"
+                class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer">
                 ✕
             </button>
         </div>
 
         <form id="modal-pesagem-form" method="post" action="" class="mt-4 space-y-4">
-            <input type="hidden" name="redirect_to" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
+            <input type="hidden" name="redirect_to"
+                value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
 
             <div>
-                <label for="modal-peso-kg" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                <label for="modal-peso-kg"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
                     Peso (kg) *
                 </label>
-                <input
-                    id="modal-peso-kg"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    name="peso_kg"
-                    required
+                <input id="modal-peso-kg" type="number" step="0.01" min="0.01" name="peso_kg" required
                     placeholder="Ex: 320.50"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                >
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
             </div>
 
             <div>
-                <label for="modal-data-pesagem" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                <label for="modal-data-pesagem"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
                     Data da Pesagem *
                 </label>
-                <input
-                    id="modal-data-pesagem"
-                    type="date"
-                    name="data_pesagem"
-                    value="{{ today }}"
-                    required
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                >
+                <input id="modal-data-pesagem" type="date" name="data_pesagem" value="{{ today }}" required
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
             </div>
 
             <div>
-                <label for="modal-observacao" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                <label for="modal-observacao"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
                     Observação (opcional)
                 </label>
-                <input
-                    id="modal-observacao"
-                    type="text"
-                    name="observacao"
-                    placeholder="Ex: Pesagem de rotina"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                >
+                <input id="modal-observacao" type="text" name="observacao" placeholder="Ex: Pesagem de rotina"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2">
-                <button
-                    type="button"
-                    onclick="closeQuickPesagemModal()"
-                    class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
-                >
+                <button type="button" onclick="closeQuickPesagemModal()"
+                    class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">
                     Cancelar
                 </button>
-                <button
-                    type="submit"
-                    class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 cursor-pointer"
-                >
+                <button type="submit"
+                    class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 cursor-pointer">
                     Salvar Pesagem
                 </button>
             </div>
@@ -387,22 +336,21 @@
 </div>
 
 <script>
-function openQuickPesagemModal(animalId, numero, fazendaLabel) {
-    const modal = document.getElementById('quick-pesagem-modal');
-    const form = document.getElementById('modal-pesagem-form');
-    document.getElementById('modal-animal-numero').textContent = '#' + numero;
-    document.getElementById('modal-animal-fazenda').textContent = 'Fazenda: ' + fazendaLabel;
-    form.action = '/animais/' + animalId + '/pesagens';
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => document.getElementById('modal-peso-kg').focus(), 50);
-}
+    function openQuickPesagemModal(animalId, numero, fazendaLabel) {
+        const modal = document.getElementById('quick-pesagem-modal');
+        const form = document.getElementById('modal-pesagem-form');
+        document.getElementById('modal-animal-numero').textContent = numero;
+        document.getElementById('modal-animal-fazenda').textContent = 'Fazenda: ' + fazendaLabel;
+        form.action = '/animais/' + animalId + '/pesagens';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => document.getElementById('modal-peso-kg').focus(), 50);
+    }
 
-function closeQuickPesagemModal() {
-    const modal = document.getElementById('quick-pesagem-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-}
+    function closeQuickPesagemModal() {
+        const modal = document.getElementById('quick-pesagem-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
 </script>
 {% endblock %}
-
