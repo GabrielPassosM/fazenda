@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Configurações centrais da aplicação carregadas via variáveis de ambiente ou arquivo .env."""
 
-    APP_NAME: str = "Fazenda - Gerenciador de Rebanho"
+    APP_NAME: str = "Fazenda - Gestão de rebanho & pesagens"
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
@@ -31,18 +31,13 @@ class Settings(BaseSettings):
     def assemble_database_url(self) -> "Settings":
         """
         Monta a DATABASE_URL dinamicamente a partir das variáveis individuais do Postgres
-        se não for informada diretamente. Se for informada diretamente (ex: Supabase, Neon),
-        normaliza o driver para postgresql+psycopg.
+        se não for informada diretamente.
         """
         if not self.DATABASE_URL:
             self.DATABASE_URL = (
-                f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+                f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
                 f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
             )
-        elif self.DATABASE_URL.startswith("postgres://"):
-            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
-        elif self.DATABASE_URL.startswith("postgresql://"):
-            self.DATABASE_URL = self.DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
         return self
 
 
