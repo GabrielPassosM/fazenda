@@ -89,17 +89,29 @@ def upgrade() -> None:
         sa.Column("data_pesagem", sa.Date(), nullable=False),
         sa.Column("peso_kg", sa.Numeric(precision=8, scale=2), nullable=False),
         sa.Column("observacao", sa.Text(), nullable=True),
+        sa.Column(
+            "em_lote",
+            sa.Boolean(),
+            server_default=sa.text("false"),
+            nullable=False,
+        ),
+        sa.Column("lote_id", sa.Uuid(), nullable=True),
+        sa.Column("observacao_lote", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(["animal_id"], ["animais.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["pasto_id"], ["pastos.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_pesagens_animal_id"), "pesagens", ["animal_id"], unique=False)
     op.create_index(op.f("ix_pesagens_data_pesagem"), "pesagens", ["data_pesagem"], unique=False)
+    op.create_index(op.f("ix_pesagens_em_lote"), "pesagens", ["em_lote"], unique=False)
+    op.create_index(op.f("ix_pesagens_lote_id"), "pesagens", ["lote_id"], unique=False)
     op.create_index(op.f("ix_pesagens_pasto_id"), "pesagens", ["pasto_id"], unique=False)
 
 
 def downgrade() -> None:
     op.drop_index(op.f("ix_pesagens_pasto_id"), table_name="pesagens")
+    op.drop_index(op.f("ix_pesagens_lote_id"), table_name="pesagens")
+    op.drop_index(op.f("ix_pesagens_em_lote"), table_name="pesagens")
     op.drop_index(op.f("ix_pesagens_data_pesagem"), table_name="pesagens")
     op.drop_index(op.f("ix_pesagens_animal_id"), table_name="pesagens")
     op.drop_table("pesagens")

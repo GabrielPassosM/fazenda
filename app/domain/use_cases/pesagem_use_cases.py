@@ -34,6 +34,7 @@ def create_pesagem_individual(db: Session, data: PesagemCreate) -> Pesagem:
         data_pesagem=data.data_pesagem,
         peso_kg=data.peso_kg,
         observacao=data.observacao,
+        em_lote=False,
     )
     pesagem_repo.create(pesagem)
     db.commit()
@@ -60,6 +61,7 @@ def create_pesagens_em_lote(db: Session, data: PesagemLoteCreate) -> list[Pesage
             f"Animal(is) não encontrado(s) na fazenda {data.fazenda.label}: {numeros_str}."
         )
 
+    lote_id = uuid.uuid4()
     pesagens_to_create: list[Pesagem] = []
     for item in data.itens:
         animal = animais_map[item.numero]
@@ -79,6 +81,9 @@ def create_pesagens_em_lote(db: Session, data: PesagemLoteCreate) -> list[Pesage
                 data_pesagem=data.data_pesagem,
                 peso_kg=item.peso_kg,
                 observacao=obs,
+                em_lote=True,
+                lote_id=lote_id,
+                observacao_lote=data.observacao_padrao,
             )
         )
 

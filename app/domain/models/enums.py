@@ -45,3 +45,21 @@ class StatusAnimalEnum(str, Enum):
         }
         return labels[self]
 
+
+class OrdenacaoAnimalEnum(str, Enum):
+    DATA_ENTRADA_DESC = "data_entrada_desc"
+    DATA_ENTRADA_ASC = "data_entrada_asc"
+    PESO_DESC = "peso_desc"
+    PESO_ASC = "peso_asc"
+
+    @property
+    def label(self) -> str:
+        labels = {
+            OrdenacaoAnimalEnum.DATA_ENTRADA_DESC: "Data de entrada (mais recente)",
+            OrdenacaoAnimalEnum.DATA_ENTRADA_ASC: "Data de entrada (mais antiga)",
+            OrdenacaoAnimalEnum.PESO_DESC: "Peso (maior para menor)",
+            OrdenacaoAnimalEnum.PESO_ASC: "Peso (menor para maior)",
+        }
+        return labels[self]
+
+

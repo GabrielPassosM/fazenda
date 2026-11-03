@@ -1,3 +1,4 @@
+from decimal import Decimal
 import math
 import uuid
 
@@ -6,7 +7,12 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.application.schemas.animal import AnimalListItem, PaginatedAnimais
 from app.domain.models.animal import Animal
-from app.domain.models.enums import CategoriaAnimalEnum, FazendaEnum, StatusAnimalEnum
+from app.domain.models.enums import (
+    CategoriaAnimalEnum,
+    FazendaEnum,
+    OrdenacaoAnimalEnum,
+    StatusAnimalEnum,
+)
 from app.domain.models.pesagem import Pesagem
 
 
@@ -66,29 +72,12 @@ class AnimalRepository:
         categoria: CategoriaAnimalEnum | None = None,
         status: StatusAnimalEnum | None = None,
         pasto_id: uuid.UUID | None = None,
+        peso_min: Decimal | None = None,
+        peso_max: Decimal | None = None,
+        ordenar_por: OrdenacaoAnimalEnum = OrdenacaoAnimalEnum.DATA_ENTRADA_DESC,
     ) -> PaginatedAnimais:
         page = max(1, page)
         page_size = max(1, min(page_size, 100))
-
-        filters = []
-        if q and q.strip():
-            filters.append(Animal.numero.ilike(f"%{q.strip()}%"))
-        if fazenda:
-            filters.append(Animal.fazenda == fazenda)
-        if categoria:
-            filters.append(Animal.categoria == categoria)
-        if status:
-            filters.append(Animal.status == status)
-        if pasto_id:
-            filters.append(Animal.pasto_id == pasto_id)
-
-        count_stmt = select(func.count(Animal.id))
-        if filters:
-            count_stmt = count_stmt.where(*filters)
-        total = self.db.scalar(count_stmt) or 0
-        total_pages = max(1, math.ceil(total / page_size))
-        if page > total_pages:
-            page = total_pages
 
         rn = (
             func.row_number()
@@ -105,6 +94,58 @@ class AnimalRepository:
             rn,
         ).subquery()
 
+        filters = []
+        if q and q.strip():
+            filters.append(Animal.numero.ilike(f"%{q.strip()}%"))
+        if fazenda:
+            filters.append(Animal.fazenda == fazenda)
+        if categoria:
+            filters.append(Animal.categoria == categoria)
+        if status:
+            filters.append(Animal.status == status)
+        if pasto_id:
+            filters.append(Animal.pasto_id == pasto_id)
+        if peso_min is not None:
+            filters.append(latest_pesagem_subq.c.ultimo_peso_kg >= peso_min)
+        if peso_max is not None:
+            filters.append(latest_pesagem_subq.c.ultimo_peso_kg <= peso_max)
+
+        count_stmt = select(func.count(Animal.id)).outerjoin(
+            latest_pesagem_subq,
+            and_(
+                Animal.id == latest_pesagem_subq.c.animal_id,
+                latest_pesagem_subq.c.rn == 1,
+            ),
+        )
+        if filters:
+            count_stmt = count_stmt.where(*filters)
+        total = self.db.scalar(count_stmt) or 0
+        total_pages = max(1, math.ceil(total / page_size))
+        if page > total_pages:
+            page = total_pages
+
+        order_by_map = {
+            OrdenacaoAnimalEnum.DATA_ENTRADA_DESC: (
+                Animal.data_entrada.desc(),
+                Animal.numero.asc(),
+            ),
+            OrdenacaoAnimalEnum.DATA_ENTRADA_ASC: (
+                Animal.data_entrada.asc(),
+                Animal.numero.asc(),
+            ),
+            OrdenacaoAnimalEnum.PESO_DESC: (
+                latest_pesagem_subq.c.ultimo_peso_kg.desc().nulls_last(),
+                Animal.numero.asc(),
+            ),
+            OrdenacaoAnimalEnum.PESO_ASC: (
+                latest_pesagem_subq.c.ultimo_peso_kg.asc().nulls_last(),
+                Animal.numero.asc(),
+            ),
+        }
+        order_clauses = order_by_map.get(
+            ordenar_por, order_by_map[OrdenacaoAnimalEnum.DATA_ENTRADA_DESC]
+        )
+
         stmt = (
             select(
                 Animal,
@@ -119,7 +160,7 @@ class AnimalRepository:
                     latest_pesagem_subq.c.rn == 1,
                 ),
             )
-            .order_by(Animal.data_entrada.desc(), Animal.numero.asc())
+            .order_by(*order_clauses)
             .offset((page - 1) * page_size)
             .limit(page_size)
         )

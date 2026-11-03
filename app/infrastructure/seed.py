@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
 import logging
+import uuid
 
 from sqlalchemy.orm import Session
 
@@ -35,6 +36,9 @@ def get_seed_data() -> list[dict]:
     def days_ago(days: int) -> date:
         return today - timedelta(days=days)
 
+    lote_tiziu_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    lote_penha_id = uuid.UUID("00000000-0000-0000-0000-000000000002")
+
     return [
         # ==================== FAZENDA TIZIU ====================
         {
@@ -47,7 +51,14 @@ def get_seed_data() -> list[dict]:
             "observacoes": "Nascido na propriedade. Pelagem nelore padrão.",
             "pesagens": [
                 {"data_pesagem": days_ago(120), "peso_kg": Decimal("185.00"), "observacao": "Peso na desmama"},
-                {"data_pesagem": days_ago(60), "peso_kg": Decimal("220.50"), "observacao": " Suplementação mineral"},
+                {
+                    "data_pesagem": days_ago(60),
+                    "peso_kg": Decimal("220.50"),
+                    "observacao": " Suplementação mineral",
+                    "em_lote": True,
+                    "lote_id": lote_tiziu_id,
+                    "observacao_lote": "Pesagem coletiva — Estação de águas",
+                },
                 {"data_pesagem": days_ago(10), "peso_kg": Decimal("252.00"), "observacao": "Pesagem de rotina"},
             ],
         },
@@ -75,7 +86,14 @@ def get_seed_data() -> list[dict]:
             "pesagens": [
                 {"data_pesagem": days_ago(240), "peso_kg": Decimal("275.00"), "observacao": "Peso de entrada"},
                 {"data_pesagem": days_ago(150), "peso_kg": Decimal("310.00"), "observacao": "Vacinação aftosa + vermífugo"},
-                {"data_pesagem": days_ago(60), "peso_kg": Decimal("342.50"), "observacao": "Início estação de águas"},
+                {
+                    "data_pesagem": days_ago(60),
+                    "peso_kg": Decimal("342.50"),
+                    "observacao": "Início estação de águas",
+                    "em_lote": True,
+                    "lote_id": lote_tiziu_id,
+                    "observacao_lote": "Pesagem coletiva — Estação de águas",
+                },
                 {"data_pesagem": days_ago(5), "peso_kg": Decimal("368.00"), "observacao": "Pronta para estação de monta"},
             ],
         },
@@ -146,7 +164,14 @@ def get_seed_data() -> list[dict]:
             "observacoes": "Bezerro de desmama precoce.",
             "pesagens": [
                 {"data_pesagem": days_ago(110), "peso_kg": Decimal("178.00"), "observacao": "Peso de entrada"},
-                {"data_pesagem": days_ago(40), "peso_kg": Decimal("214.00"), "observacao": "Manejo sanitário em dia"},
+                {
+                    "data_pesagem": days_ago(40),
+                    "peso_kg": Decimal("214.00"),
+                    "observacao": "Manejo sanitário em dia",
+                    "em_lote": True,
+                    "lote_id": lote_penha_id,
+                    "observacao_lote": "Manejo sanitário em dia",
+                },
             ],
         },
         {
@@ -279,6 +304,9 @@ def seed_database(db: Session) -> tuple[int, int]:
                 data_pesagem=p["data_pesagem"],
                 peso_kg=p["peso_kg"],
                 observacao=p["observacao"],
+                em_lote=p.get("em_lote", False),
+                lote_id=p.get("lote_id"),
+                observacao_lote=p.get("observacao_lote"),
             )
             for p in item.get("pesagens", [])
         ]

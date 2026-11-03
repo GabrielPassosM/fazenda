@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 import uuid
 
-from sqlalchemy import Date, ForeignKey, Numeric, Text, Uuid
+from sqlalchemy import Boolean, Date, ForeignKey, Numeric, Text, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.models.base import Base
@@ -43,6 +43,22 @@ class Pesagem(Base):
         nullable=False,
     )
     observacao: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    em_lote: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=false(),
+        index=True,
+    )
+    lote_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        nullable=True,
+        index=True,
+    )
+    observacao_lote: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )

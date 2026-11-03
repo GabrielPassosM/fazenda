@@ -32,17 +32,9 @@
     </div>
 
     <!-- Barra de Filtros -->
+    {% set has_advanced_filters = (filters.q or filters.pasto_id or filters.categoria or filters.status != 'ativo' or filters.peso_min or filters.peso_max) %}
     <form method="get" action="/" class="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-            <div>
-                <label for="filter-q" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                    Número do Animal
-                </label>
-                <input id="filter-q" type="text" name="q" value="{{ filters.q }}"
-                    placeholder="Buscar por nº (ex: 104)..."
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
-            </div>
-
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
                 <label for="filter-fazenda"
                     class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
@@ -57,6 +49,53 @@
                     </option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <div>
+                <label for="filter-ordenar-por"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                    Ordenar por
+                </label>
+                <select id="filter-ordenar-por" name="ordenar_por"
+                    class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+                    {% for ord in OrdenacaoAnimalEnum %}
+                    <option value="{{ ord.value }}" {% if filters.ordenar_por==ord.value %}selected{% endif %}>
+                        {{ ord.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit"
+                    class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer">
+                    Filtrar
+                </button>
+                <button id="btn-toggle-filters" type="button" onclick="toggleAdvancedFilters()"
+                    aria-expanded="{{ 'true' if has_advanced_filters else 'false' }}"
+                    aria-controls="advanced-filters"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer">
+                    <span id="toggle-filters-label">{{ "Menos filtros" if has_advanced_filters else "Mais filtros" }}</span>
+                    <span id="toggle-filters-icon" class="text-xs text-slate-500">{{ "▲" if has_advanced_filters else "▼" }}</span>
+                </button>
+                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' or filters.peso_min or filters.peso_max or filters.ordenar_por != 'data_entrada_desc' %}
+                <a href="/"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+                    Limpar
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="advanced-filters"
+            class="{% if has_advanced_filters %}grid{% else %}hidden{% endif %} mt-3 grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+                <label for="filter-q" class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                    Número do Animal
+                </label>
+                <input id="filter-q" type="text" name="q" value="{{ filters.q }}"
+                    placeholder="Buscar por nº (ex: 104)..."
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
             </div>
 
             <div>
@@ -107,17 +146,24 @@
                 </select>
             </div>
 
-            <div class="flex items-end gap-2">
-                <button type="submit"
-                    class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer">
-                    Filtrar
-                </button>
-                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' %}
-                <a href="/"
-                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
-                    Limpar
-                </a>
-                {% endif %}
+            <div>
+                <label for="filter-peso-min"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                    Peso Mínimo (kg)
+                </label>
+                <input id="filter-peso-min" type="number" step="0.01" min="0" name="peso_min"
+                    value="{{ filters.peso_min }}" placeholder="Ex: 200"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
+            </div>
+
+            <div>
+                <label for="filter-peso-max"
+                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                    Peso Máximo (kg)
+                </label>
+                <input id="filter-peso-max" type="number" step="0.01" min="0" name="peso_max"
+                    value="{{ filters.peso_max }}" placeholder="Ex: 450"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600">
             </div>
         </div>
     </form>
@@ -134,6 +180,9 @@
             </span>
         </div>
         {% if paginated.items %}
+        {% set base_filter_params = "q=" ~ (filters.q | urlencode) ~ "&fazenda=" ~ filters.fazenda ~ "&pasto_id=" ~ filters.pasto_id ~ "&categoria=" ~ filters.categoria ~ "&status=" ~ filters.status ~ "&peso_min=" ~ filters.peso_min ~ "&peso_max=" ~ filters.peso_max %}
+        {% set next_data_sort = "data_entrada_asc" if filters.ordenar_por == "data_entrada_desc" else "data_entrada_desc" %}
+        {% set next_peso_sort = "peso_asc" if filters.ordenar_por == "peso_desc" else "peso_desc" %}
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -142,8 +191,32 @@
                         <th scope="col" class="px-4 py-3.5">Fazenda</th>
                         <th scope="col" class="px-4 py-3.5">Pasto</th>
                         <th scope="col" class="px-4 py-3.5">Categoria</th>
-                        <th scope="col" class="px-4 py-3.5">Data Entrada</th>
-                        <th scope="col" class="px-4 py-3.5">Último Peso</th>
+                        <th scope="col" class="px-4 py-3.5">
+                            <a href="/?{{ base_filter_params }}&ordenar_por={{ next_data_sort }}"
+                                class="inline-flex items-center gap-1 hover:text-slate-900">
+                                Data Entrada
+                                {% if filters.ordenar_por == 'data_entrada_desc' %}
+                                <span class="text-emerald-700" title="Mais recente primeiro">↓</span>
+                                {% elif filters.ordenar_por == 'data_entrada_asc' %}
+                                <span class="text-emerald-700" title="Mais antiga primeiro">↑</span>
+                                {% else %}
+                                <span class="text-slate-300">↕</span>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th scope="col" class="px-4 py-3.5">
+                            <a href="/?{{ base_filter_params }}&ordenar_por={{ next_peso_sort }}"
+                                class="inline-flex items-center gap-1 hover:text-slate-900">
+                                Último Peso
+                                {% if filters.ordenar_por == 'peso_desc' %}
+                                <span class="text-emerald-700" title="Maior peso primeiro">↓</span>
+                                {% elif filters.ordenar_por == 'peso_asc' %}
+                                <span class="text-emerald-700" title="Menor peso primeiro">↑</span>
+                                {% else %}
+                                <span class="text-slate-300">↕</span>
+                                {% endif %}
+                            </a>
+                        </th>
                         <th scope="col" class="px-4 py-3.5">Status</th>
                         <th scope="col" class="px-4 py-3.5 text-right sm:px-6">Ações</th>
                     </tr>
@@ -237,8 +310,7 @@
         </div>
 
         <!-- Rodapé com Paginação -->
-        {% set query_params = "&q=" ~ (filters.q | urlencode) ~ "&fazenda=" ~ filters.fazenda ~ "&pasto_id=" ~ filters.pasto_id ~ "&categoria=" ~
-        filters.categoria ~ "&status=" ~ filters.status %}
+        {% set query_params = "&" ~ base_filter_params ~ "&ordenar_por=" ~ filters.ordenar_por %}
         <div
             class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:px-6">
             <div class="text-xs text-slate-600">
@@ -283,14 +355,14 @@
             </div>
             <h3 class="mt-3 text-base font-semibold text-slate-900">Nenhum animal encontrado</h3>
             <p class="mt-1 text-sm text-slate-500">
-                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' %}
+                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' or filters.peso_min or filters.peso_max or filters.ordenar_por != 'data_entrada_desc' %}
                 Não há animais correspondentes aos filtros selecionados.
                 {% else %}
                 Comece cadastrando o primeiro animal do rebanho.
                 {% endif %}
             </p>
             <div class="mt-5 flex justify-center gap-3">
-                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' %}
+                {% if filters.q or filters.fazenda or filters.pasto_id or filters.categoria or filters.status != 'ativo' or filters.peso_min or filters.peso_max or filters.ordenar_por != 'data_entrada_desc' %}
                 <a href="/"
                     class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                     Limpar Filtros
@@ -384,6 +456,28 @@
 </div>
 
 <script>
+    function toggleAdvancedFilters() {
+        const panel = document.getElementById('advanced-filters');
+        const btn = document.getElementById('btn-toggle-filters');
+        const label = document.getElementById('toggle-filters-label');
+        const icon = document.getElementById('toggle-filters-icon');
+        const isHidden = panel.classList.contains('hidden');
+
+        if (isHidden) {
+            panel.classList.remove('hidden');
+            panel.classList.add('grid');
+            btn.setAttribute('aria-expanded', 'true');
+            label.textContent = 'Menos filtros';
+            icon.textContent = '▲';
+        } else {
+            panel.classList.add('hidden');
+            panel.classList.remove('grid');
+            btn.setAttribute('aria-expanded', 'false');
+            label.textContent = 'Mais filtros';
+            icon.textContent = '▼';
+        }
+    }
+
     function openQuickPesagemModal(animalId, numero, fazendaLabel, pastoId) {
         const modal = document.getElementById('quick-pesagem-modal');
         const form = document.getElementById('modal-pesagem-form');

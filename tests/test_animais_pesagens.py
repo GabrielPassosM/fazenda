@@ -148,6 +148,19 @@ def test_pesagem_em_lote_success_and_missing_validation(
     db_session.add_all([a1, a2])
     db_session.commit()
 
+    # Por padrão, /pesagens/lote exibe o histórico (inicialmente vazio) e o botão para adicionar
+    empty_hist = client.get("/pesagens/lote")
+    assert empty_hist.status_code == 200
+    assert "Histórico de Pesagens em Lote" in empty_hist.text
+    assert "Nenhuma pesagem em lote registrada" in empty_hist.text
+    assert "Adicionar Pesagem em Lote" in empty_hist.text
+    assert "/pesagens/lote/novo" in empty_hist.text
+
+    # Acessa a tela de lançamento de pesagem em lote
+    form_lote = client.get("/pesagens/lote/novo")
+    assert form_lote.status_code == 200
+    assert "Lançamento de Pesagem em Lote" in form_lote.text
+
     # Tenta lançar lote com um número inexistente ('999')
     bad_resp = client.post(
         "/pesagens/lote",
@@ -177,8 +190,24 @@ def test_pesagem_em_lote_success_and_missing_validation(
         follow_redirects=True,
     )
     assert ok_resp.status_code == 200
-    assert "420,00 kg" in ok_resp.text
-    assert "615,50 kg" in ok_resp.text
+    assert "Histórico de Pesagens em Lote" in ok_resp.text
+    assert "Tiziu" in ok_resp.text
+    assert "01/11/2026" in ok_resp.text
+    assert "2 animais" in ok_resp.text
+    assert "517,75 kg" in ok_resp.text
+    assert "Lote Nov" in ok_resp.text
+
+    # Verifica que na listagem geral do rebanho os pesos individuais foram atualizados
+    rebanho_resp = client.get("/")
+    assert rebanho_resp.status_code == 200
+    assert "420,00 kg" in rebanho_resp.text
+    assert "615,50 kg" in rebanho_resp.text
+
+    # Verifica que o flag em_lote foi salvo como True nos registros criados
+    db_session.expire_all()
+    pesagens_salvas = db_session.query(Pesagem).all()
+    assert len(pesagens_salvas) == 2
+    assert all(p.em_lote is True for p in pesagens_salvas)
 
 
 def test_edit_and_delete_animal(client: TestClient, db_session: Session) -> None:
@@ -646,9 +675,11 @@ def test_pesagens_router_and_htmx_branches(
     del_404 = client.post(f"/pesagens/{pesagem.id}/excluir")
     assert del_404.status_code == 404
 
-    # GET /pesagens/lote
+    # GET /pesagens/lote e /pesagens/lote/novo
     lote_get = client.get("/pesagens/lote?fazenda=tiziu")
     assert lote_get.status_code == 200
+    lote_novo_get = client.get("/pesagens/lote/novo?fazenda=tiziu")
+    assert lote_novo_get.status_code == 200
 
     # POST /pesagens/lote sem nenhuma linha preenchida
     lote_empty = client.post(
@@ -1178,6 +1209,306 @@ def test_rodizio_pastos_em_lote_e_em_cadeia(
                 ]
             ),
         )
+
+
+def test_list_animais_filter_by_peso_min_and_peso_max(
+    client: TestClient, db_session: Session
+) -> None:
+    a_leve = Animal(
+        numero="W-100",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.BEZERRO,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_medio = Animal(
+        numero="W-200",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.NOVILHA,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_pesado = Animal(
+        numero="W-300",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.TOURO,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_sem_peso = Animal(
+        numero="W-000",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.VACA,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    db_session.add_all([a_leve, a_medio, a_pesado, a_sem_peso])
+    db_session.commit()
+
+    # a_leve tinha 150 kg antes e agora tem 180 kg (deve considerar o último peso: 180 kg)
+    db_session.add_all(
+        [
+            Pesagem(
+                animal_id=a_leve.id,
+                data_pesagem=date(2026, 9, 1),
+                peso_kg=Decimal("150.00"),
+            ),
+            Pesagem(
+                animal_id=a_leve.id,
+                data_pesagem=date(2026, 10, 15),
+                peso_kg=Decimal("180.00"),
+            ),
+            Pesagem(
+                animal_id=a_medio.id,
+                data_pesagem=date(2026, 10, 15),
+                peso_kg=Decimal("320.50"),
+            ),
+            Pesagem(
+                animal_id=a_pesado.id,
+                data_pesagem=date(2026, 10, 15),
+                peso_kg=Decimal("510.00"),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    # 1. Apenas peso_min (ex: >= 300)
+    resp_min = client.get("/?peso_min=300")
+    assert resp_min.status_code == 200
+    assert "W-200" in resp_min.text
+    assert "W-300" in resp_min.text
+    assert "W-100" not in resp_min.text
+    assert "W-000" not in resp_min.text
+
+    # 2. Apenas peso_max (ex: <= 320,50 com vírgula)
+    resp_max = client.get("/?peso_max=320,50")
+    assert resp_max.status_code == 200
+    assert "W-100" in resp_max.text
+    assert "W-200" in resp_max.text
+    assert "W-300" not in resp_max.text
+    assert "W-000" not in resp_max.text
+
+    # 3. Ambos peso_min e peso_max (intervalo 200 a 400)
+    resp_range = client.get("/?peso_min=200&peso_max=400")
+    assert resp_range.status_code == 200
+    assert "W-200" in resp_range.text
+    assert "W-100" not in resp_range.text
+    assert "W-300" not in resp_range.text
+    assert "W-000" not in resp_range.text
+
+    # 4. Valores inválidos para peso_min / peso_max são ignorados sem erro
+    resp_invalid = client.get("/?peso_min=invalido&peso_max=xyz")
+    assert resp_invalid.status_code == 200
+    assert "W-100" in resp_invalid.text
+    assert "W-200" in resp_invalid.text
+    assert "W-300" in resp_invalid.text
+    assert "W-000" in resp_invalid.text
+
+
+def test_list_animais_ordering_by_data_entrada_and_peso(
+    client: TestClient, db_session: Session
+) -> None:
+    a_antigo_pesado = Animal(
+        numero="ORD-1",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 8, 1),
+        categoria=CategoriaAnimalEnum.TOURO,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_medio_leve = Animal(
+        numero="ORD-2",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 9, 1),
+        categoria=CategoriaAnimalEnum.BEZERRO,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_recente_medio = Animal(
+        numero="ORD-3",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.NOVILHA,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_sem_peso = Animal(
+        numero="ORD-4",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 15),
+        categoria=CategoriaAnimalEnum.VACA,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    db_session.add_all([a_antigo_pesado, a_medio_leve, a_recente_medio, a_sem_peso])
+    db_session.commit()
+
+    db_session.add_all(
+        [
+            Pesagem(
+                animal_id=a_antigo_pesado.id,
+                data_pesagem=date(2026, 10, 10),
+                peso_kg=Decimal("550.00"),
+            ),
+            Pesagem(
+                animal_id=a_medio_leve.id,
+                data_pesagem=date(2026, 10, 10),
+                peso_kg=Decimal("180.00"),
+            ),
+            Pesagem(
+                animal_id=a_recente_medio.id,
+                data_pesagem=date(2026, 10, 10),
+                peso_kg=Decimal("320.00"),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    # 1. Padrão / data_entrada_desc: mais recente para mais antiga -> ORD-4, ORD-3, ORD-2, ORD-1
+    r_desc = client.get("/?ordenar_por=data_entrada_desc")
+    assert r_desc.status_code == 200
+    assert (
+        r_desc.text.index("ORD-4")
+        < r_desc.text.index("ORD-3")
+        < r_desc.text.index("ORD-2")
+        < r_desc.text.index("ORD-1")
+    )
+
+    # 2. data_entrada_asc: mais antiga para mais recente -> ORD-1, ORD-2, ORD-3, ORD-4
+    r_asc = client.get("/?ordenar_por=data_entrada_asc")
+    assert r_asc.status_code == 200
+    assert (
+        r_asc.text.index("ORD-1")
+        < r_asc.text.index("ORD-2")
+        < r_asc.text.index("ORD-3")
+        < r_asc.text.index("ORD-4")
+    )
+
+    # 3. peso_desc: maior peso para menor (sem pesagem no final) -> ORD-1 (550), ORD-3 (320), ORD-2 (180), ORD-4 (NULL)
+    r_peso_desc = client.get("/?ordenar_por=peso_desc")
+    assert r_peso_desc.status_code == 200
+    assert (
+        r_peso_desc.text.index("ORD-1")
+        < r_peso_desc.text.index("ORD-3")
+        < r_peso_desc.text.index("ORD-2")
+        < r_peso_desc.text.index("ORD-4")
+    )
+
+    # 4. peso_asc: menor peso para maior (sem pesagem no final) -> ORD-2 (180), ORD-3 (320), ORD-1 (550), ORD-4 (NULL)
+    r_peso_asc = client.get("/?ordenar_por=peso_asc")
+    assert r_peso_asc.status_code == 200
+    assert (
+        r_peso_asc.text.index("ORD-2")
+        < r_peso_asc.text.index("ORD-3")
+        < r_peso_asc.text.index("ORD-1")
+        < r_peso_asc.text.index("ORD-4")
+    )
+
+    # 5. Valor inválido faz fallback para data_entrada_desc
+    r_invalid = client.get("/?ordenar_por=invalido")
+    assert r_invalid.status_code == 200
+    assert (
+        r_invalid.text.index("ORD-4")
+        < r_invalid.text.index("ORD-3")
+        < r_invalid.text.index("ORD-2")
+        < r_invalid.text.index("ORD-1")
+    )
+    # No modo encolhido (apenas fazenda/ordenação), #advanced-filters inicia oculto e o botão exibe "Mais filtros"
+    assert 'id="btn-toggle-filters"' in r_invalid.text
+    assert "Mais filtros" in r_invalid.text
+    assert 'aria-expanded="false"' in r_invalid.text
+
+    # Quando há um filtro avançado ativo (ex: peso_min), #advanced-filters inicia expandido ("Menos filtros")
+    r_expanded = client.get("/?peso_min=200")
+    assert r_expanded.status_code == 200
+    assert "Menos filtros" in r_expanded.text
+    assert 'aria-expanded="true"' in r_expanded.text
+
+
+def test_historico_pesagens_em_lote_columns_and_ignore_individual(
+    client: TestClient, db_session: Session
+) -> None:
+    a_tiziu_1 = Animal(
+        numero="L-01",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 9, 1),
+        categoria=CategoriaAnimalEnum.BEZERRO,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_tiziu_2 = Animal(
+        numero="L-02",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 9, 1),
+        categoria=CategoriaAnimalEnum.NOVILHA,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    a_penha = Animal(
+        numero="P-01",
+        fazenda=FazendaEnum.NS_PENHA,
+        data_entrada=date(2026, 9, 1),
+        categoria=CategoriaAnimalEnum.VACA,
+        status=StatusAnimalEnum.ATIVO,
+    )
+    db_session.add_all([a_tiziu_1, a_tiziu_2, a_penha])
+    db_session.commit()
+
+    # Pesagem individual não deve aparecer no histórico de lotes
+    client.post(
+        f"/animais/{a_tiziu_1.id}/pesagens",
+        data={
+            "data_pesagem": "2026-09-10",
+            "peso_kg": "190.00",
+            "observacao": "Individual Setembro",
+        },
+    )
+
+    resp_vazio = client.get("/pesagens/lote")
+    assert resp_vazio.status_code == 200
+    assert "Nenhuma pesagem em lote registrada" in resp_vazio.text
+    assert "Individual Setembro" not in resp_vazio.text
+
+    # Lança 1º lote na Fazenda Tiziu (2 animais: 200 kg e 300 kg -> média 250,00 kg)
+    client.post(
+        "/pesagens/lote",
+        data={
+            "fazenda": "tiziu",
+            "data_pesagem": "2026-10-05",
+            "observacao_padrao": "Pesagem Outubro Tiziu",
+            "numeros": ["L-01", "L-02"],
+            "pesos": ["200.00", "300.00"],
+            "observacoes": ["", "Obs individual L-02"],
+        },
+    )
+
+    # Lança 2º lote na Fazenda N. S. da Penha sem observação padrão (1 animal: 440,50 kg)
+    client.post(
+        "/pesagens/lote/novo",
+        data={
+            "fazenda": "ns_penha",
+            "data_pesagem": "2026-10-20",
+            "observacao_padrao": "",
+            "numeros": ["P-01"],
+            "pesos": ["440.50"],
+            "observacoes": [""],
+        },
+    )
+
+    hist_resp = client.get("/pesagens/lote")
+    assert hist_resp.status_code == 200
+    # Verifica cabeçalhos das colunas exigidas
+    assert "Fazenda" in hist_resp.text
+    assert "Data Pesagem" in hist_resp.text
+    assert "Quantidade de Animais" in hist_resp.text
+    assert "Peso Médio Obtido" in hist_resp.text
+    assert "Observação Padrão do Lote" in hist_resp.text
+    # Verifica dados dos lotes lançados (mais recente primeiro)
+    assert hist_resp.text.index("20/10/2026") < hist_resp.text.index("05/10/2026")
+    assert "N. S. da Penha" in hist_resp.text
+    assert "1 animal" in hist_resp.text
+    assert "440,50 kg" in hist_resp.text
+    assert "Tiziu" in hist_resp.text
+    assert "2 animais" in hist_resp.text
+    assert "250,00 kg" in hist_resp.text
+    assert "Pesagem Outubro Tiziu" in hist_resp.text
+
+
+
 
 
 

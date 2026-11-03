@@ -18,6 +18,7 @@ from app.application.templating import templates
 from app.domain.models.enums import FazendaEnum
 from app.domain.repositories.animal_repository import AnimalRepository
 from app.domain.repositories.pasto_repository import PastoRepository
+from app.domain.repositories.pesagem_repository import PesagemRepository
 from app.domain.use_cases.exceptions import DomainError, NotFoundError
 from app.domain.use_cases.pesagem_use_cases import (
     create_pesagem_individual,
@@ -128,6 +129,31 @@ def delete_pesagem_submit(
 @router.get(
     "/pesagens/lote",
     response_class=HTMLResponse,
+    summary="Histórico de pesagens em lote",
+)
+def pesagem_lote_list(
+    request: Request,
+    fazenda: str | None = Query(None),
+    msg: str | None = Query(None),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    fazenda_val = fazenda if fazenda in FazendaEnum._value2member_map_ else ""
+    pesagem_repo = PesagemRepository(db)
+    historico = pesagem_repo.list_historico_lotes()
+    return templates.TemplateResponse(
+        request=request,
+        name="pesagens/lote_list.html",
+        context={
+            "historico": historico,
+            "fazenda": fazenda_val,
+            "msg": msg,
+        },
+    )
+
+
+@router.get(
+    "/pesagens/lote/novo",
+    response_class=HTMLResponse,
     summary="Tela de lançamento de pesagem em lote",
 )
 def pesagem_lote_form(
@@ -164,6 +190,11 @@ def pesagem_lote_form(
     "/pesagens/lote",
     response_class=HTMLResponse,
     summary="Processar lançamento de pesagens em lote",
+)
+@router.post(
+    "/pesagens/lote/novo",
+    response_class=HTMLResponse,
+    include_in_schema=False,
 )
 def pesagem_lote_submit(
     request: Request,
@@ -266,7 +297,8 @@ def pesagem_lote_submit(
             f"{qtd} {'pesagem registrada' if qtd == 1 else 'pesagens registradas'} em lote com sucesso!"
         )
         return RedirectResponse(
-            url=f"/?fazenda={fazenda_enum.value}&msg={msg}", status_code=303
+            url=f"/pesagens/lote?fazenda={fazenda_enum.value}&msg={msg}",
+            status_code=303,
         )
 
     except (DomainError, ValidationError, ValueError) as exc:

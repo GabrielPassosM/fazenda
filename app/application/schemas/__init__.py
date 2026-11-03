@@ -17,6 +17,7 @@ from app.application.schemas.pasto import (
 from app.application.schemas.pesagem import (
     PesagemCreate,
     PesagemLoteCreate,
+    PesagemLoteHistoricoItem,
     PesagemLoteItem,
 )
 
@@ -42,4 +43,5 @@ __all__ = [
     "PesagemCreate",
     "PesagemLoteItem",
     "PesagemLoteCreate",
+    "PesagemLoteHistoricoItem",
 ]

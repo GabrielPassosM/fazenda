@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 
 from app.application.schemas.animal import AnimalCreate, AnimalUpdate
 from app.application.templating import templates
-from app.domain.models.enums import CategoriaAnimalEnum, FazendaEnum, StatusAnimalEnum
+from app.domain.models.enums import (
+    CategoriaAnimalEnum,
+    FazendaEnum,
+    OrdenacaoAnimalEnum,
+    StatusAnimalEnum,
+)
 from app.domain.repositories.animal_repository import AnimalRepository
 from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.use_cases.animal_use_cases import (
@@ -56,6 +61,9 @@ def list_animais(
     categoria: str | None = Query(None),
     status: str | None = Query(None),
     pasto_id: str | None = Query(None),
+    peso_min: str | None = Query(None),
+    peso_max: str | None = Query(None),
+    ordenar_por: str | None = Query(None),
     msg: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -71,10 +79,25 @@ def list_animais(
         if status_param in StatusAnimalEnum._value2member_map_
         else None
     )
+    ordenar_por_enum = (
+        OrdenacaoAnimalEnum(ordenar_por)
+        if ordenar_por in OrdenacaoAnimalEnum._value2member_map_
+        else OrdenacaoAnimalEnum.DATA_ENTRADA_DESC
+    )
     try:
         pasto_uuid = _parse_uuid(pasto_id)
     except ValueError:
         pasto_uuid = None
+
+    try:
+        peso_min_dec = _parse_decimal(peso_min)
+    except InvalidOperation:
+        peso_min_dec = None
+
+    try:
+        peso_max_dec = _parse_decimal(peso_max)
+    except InvalidOperation:
+        peso_max_dec = None
 
     repo = AnimalRepository(db)
     pasto_repo = PastoRepository(db)
@@ -86,6 +109,9 @@ def list_animais(
         categoria=categoria_enum,
         status=status_enum,
         pasto_id=pasto_uuid,
+        peso_min=peso_min_dec,
+        peso_max=peso_max_dec,
+        ordenar_por=ordenar_por_enum,
     )
 
     return templates.TemplateResponse(
@@ -101,6 +127,9 @@ def list_animais(
                 "categoria": categoria_enum.value if categoria_enum else "",
                 "status": status_enum.value if status_enum else "",
                 "pasto_id": str(pasto_uuid) if pasto_uuid else "",
+                "peso_min": str(peso_min_dec) if peso_min_dec is not None else "",
+                "peso_max": str(peso_max_dec) if peso_max_dec is not None else "",
+                "ordenar_por": ordenar_por_enum.value,
             },
             "today": date.today().isoformat(),
             "msg": msg,

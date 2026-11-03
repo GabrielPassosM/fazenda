@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 import uuid
@@ -59,4 +60,14 @@ class PesagemLoteCreate(BaseModel):
             return None
         cleaned = v.strip()
         return cleaned if cleaned else None
+
+
+@dataclass
+class PesagemLoteHistoricoItem:
+    fazenda: FazendaEnum
+    data_pesagem: date
+    quantidade_animais: int
+    peso_medio_kg: Decimal
+    observacao_padrao: str | None = None
+
 
