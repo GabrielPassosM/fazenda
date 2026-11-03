@@ -14,12 +14,11 @@ run: ## Inicia o servidor local em modo de desenvolvimento (hot-reload)
 test: ## Executa a suíte de testes automatizados com Pytest e relatório de cobertura
 	$(POETRY) run pytest --cov=app --cov-report=term-missing
 
-up: ## Sobe os containers locais (app + PostgreSQL 17) em background
+up: ## Sobe os containers locais (app + PostgreSQL 17) em background e aplica migrações
 	docker compose up --build -d
 
-start: ## Sobe o Docker Compose, aplica as migrações do Alembic e popula o banco local (seed)
-	docker compose up --build -d
-	docker compose exec app alembic upgrade head
+start: ## Sobe o Docker Compose (aguardando migrações/healthcheck) e popula o banco local (seed)
+	docker compose up --build -d --wait
 	docker compose exec app python -m app.infrastructure.seed
 
 seed: ## Popula o banco de dados local com registros iniciais de exemplo
