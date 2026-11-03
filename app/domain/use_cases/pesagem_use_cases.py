@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.application.schemas.pesagem import PesagemCreate, PesagemLoteCreate
 from app.domain.models.pesagem import Pesagem
 from app.domain.repositories.animal_repository import AnimalRepository
+from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.repositories.pesagem_repository import PesagemRepository
 from app.domain.use_cases.exceptions import DomainError, NotFoundError
 
@@ -17,8 +18,19 @@ def create_pesagem_individual(db: Session, data: PesagemCreate) -> Pesagem:
     if animal is None:
         raise NotFoundError("Animal não encontrado.")
 
+    pasto_id = (
+        data.pasto_id
+        if "pasto_id" in data.model_fields_set
+        else animal.pasto_id
+    )
+    if pasto_id is not None:
+        pasto_repo = PastoRepository(db)
+        if pasto_repo.get_by_id(pasto_id) is None:
+            raise NotFoundError("Pasto não encontrado.")
+
     pesagem = Pesagem(
         animal_id=animal.id,
+        pasto_id=pasto_id,
         data_pesagem=data.data_pesagem,
         peso_kg=data.peso_kg,
         observacao=data.observacao,
@@ -32,6 +44,7 @@ def create_pesagem_individual(db: Session, data: PesagemCreate) -> Pesagem:
 def create_pesagens_em_lote(db: Session, data: PesagemLoteCreate) -> list[Pesagem]:
     animal_repo = AnimalRepository(db)
     pesagem_repo = PesagemRepository(db)
+    pasto_repo = PastoRepository(db)
 
     numeros = [item.numero for item in data.itens]
     animais_map = animal_repo.get_by_fazenda_and_numeros(data.fazenda, numeros)
@@ -50,10 +63,19 @@ def create_pesagens_em_lote(db: Session, data: PesagemLoteCreate) -> list[Pesage
     pesagens_to_create: list[Pesagem] = []
     for item in data.itens:
         animal = animais_map[item.numero]
+        pasto_id = (
+            item.pasto_id
+            if "pasto_id" in item.model_fields_set
+            else animal.pasto_id
+        )
+        if pasto_id is not None and pasto_repo.get_by_id(pasto_id) is None:
+            raise DomainError("Pasto selecionado não encontrado.")
+
         obs = item.observacao if item.observacao else data.observacao_padrao
         pesagens_to_create.append(
             Pesagem(
                 animal_id=animal.id,
+                pasto_id=pasto_id,
                 data_pesagem=data.data_pesagem,
                 peso_kg=item.peso_kg,
                 observacao=obs,

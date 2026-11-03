@@ -261,6 +261,7 @@ def seed_database(db: Session) -> tuple[int, int]:
         pesagens = [
             Pesagem(
                 animal_id=animal.id,
+                pasto_id=animal.pasto_id,
                 data_pesagem=p["data_pesagem"],
                 peso_kg=p["peso_kg"],
                 observacao=p["observacao"],

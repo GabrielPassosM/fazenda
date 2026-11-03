@@ -926,6 +926,82 @@ def test_pasto_crud_and_animal_relationship(
             ),
         )
 
+    # Pesagem individual selecionando um pasto específico (diferente do pasto atual do animal, sem alterar o do animal)
+    pasto3 = create_pasto(db_session, PastoCreate(nome="Pasto Maternidade"))
+    pesagem_pasto_resp = client.post(
+        f"/animais/{animal_901.id}/pesagens",
+        data={
+            "data_pesagem": "2026-10-15",
+            "peso_kg": "310.00",
+            "pasto_id": str(pasto3.id),
+            "observacao": "Pesado na maternidade",
+        },
+        follow_redirects=True,
+    )
+    assert pesagem_pasto_resp.status_code == 200
+    assert "Pasto Maternidade" in pesagem_pasto_resp.text
+
+    db_session.expire_all()
+    animal_check = animal_repo.get_by_id(animal_901.id)
+    assert animal_check is not None
+    assert animal_check.pasto_id is None
+    assert animal_check.pesagens[0].pasto_id == pasto3.id
+
+    # Pesagem individual sem pasto selecionado (pasto_id="")
+    pesagem_sem_pasto_resp = client.post(
+        f"/animais/{animal_901.id}/pesagens",
+        data={
+            "data_pesagem": "2026-10-20",
+            "peso_kg": "315.00",
+            "pasto_id": "",
+        },
+        follow_redirects=True,
+    )
+    assert pesagem_sem_pasto_resp.status_code == 200
+
+    # Pesagem em lote informando pastos por linha
+    lote_pasto_resp = client.post(
+        "/pesagens/lote",
+        data={
+            "fazenda": "tiziu",
+            "data_pesagem": "2026-10-25",
+            "numeros": ["901"],
+            "pesos": ["322.00"],
+            "pastos": [str(pasto1.id)],
+            "observacoes": ["Lote com pasto"],
+        },
+        follow_redirects=True,
+    )
+    assert lote_pasto_resp.status_code == 200
+
+    # Pesagem em lote com pasto inexistente -> 422 DomainError
+    lote_bad_pasto = client.post(
+        "/pesagens/lote",
+        data={
+            "fazenda": "tiziu",
+            "data_pesagem": "2026-10-26",
+            "numeros": ["901"],
+            "pesos": ["325.00"],
+            "pastos": [str(uuid.uuid4())],
+            "observacoes": [""],
+        },
+    )
+    assert lote_bad_pasto.status_code == 422
+    assert "Pasto selecionado não encontrado" in lote_bad_pasto.text
+
+    # create_pesagem_individual com pasto_id inexistente -> NotFoundError
+    with pytest.raises(NotFoundError):
+        create_pesagem_individual(
+            db_session,
+            PesagemCreate(
+                animal_id=animal_901.id,
+                data_pesagem=date(2026, 10, 27),
+                peso_kg=Decimal("330.00"),
+                pasto_id=uuid.uuid4(),
+            ),
+        )
+
+
 
 
 

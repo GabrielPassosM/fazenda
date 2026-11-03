@@ -8,6 +8,7 @@ from app.domain.models.base import Base
 
 if TYPE_CHECKING:
     from app.domain.models.animal import Animal
+    from app.domain.models.pesagem import Pesagem
 
 
 class Pasto(Base):
@@ -29,6 +30,10 @@ class Pasto(Base):
 
     animais: Mapped[list["Animal"]] = relationship(
         "Animal",
+        back_populates="pasto",
+    )
+    pesagens: Mapped[list["Pesagem"]] = relationship(
+        "Pesagem",
         back_populates="pasto",
     )
 

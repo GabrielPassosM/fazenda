@@ -17,6 +17,7 @@ from app.application.schemas.pesagem import (
 from app.application.templating import templates
 from app.domain.models.enums import FazendaEnum
 from app.domain.repositories.animal_repository import AnimalRepository
+from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.use_cases.exceptions import DomainError, NotFoundError
 from app.domain.use_cases.pesagem_use_cases import (
     create_pesagem_individual,
@@ -43,6 +44,12 @@ def _parse_date(value: str | None) -> date | None:
     return date.fromisoformat(value.strip())
 
 
+def _parse_uuid(value: str | None) -> uuid.UUID | None:
+    if value is None or not value.strip():
+        return None
+    return uuid.UUID(value.strip())
+
+
 @router.post(
     "/animais/{animal_id}/pesagens",
     summary="Registrar pesagem individual para um animal",
@@ -51,6 +58,7 @@ def create_pesagem_individual_submit(
     animal_id: uuid.UUID,
     data_pesagem: str = Form(""),
     peso_kg: str = Form(""),
+    pasto_id: str | None = Form(None),
     observacao: str = Form(""),
     redirect_to: str = Form(""),
     db: Session = Depends(get_db),
@@ -66,12 +74,21 @@ def create_pesagem_individual_submit(
         if peso_dec is None or peso_dec <= 0:
             raise DomainError("Informe um peso válido maior que zero.")
 
-        schema = PesagemCreate(
-            animal_id=animal_id,
-            data_pesagem=dt_pesagem,
-            peso_kg=peso_dec,
-            observacao=observacao,
-        )
+        if pasto_id is not None:
+            schema = PesagemCreate(
+                animal_id=animal_id,
+                data_pesagem=dt_pesagem,
+                peso_kg=peso_dec,
+                pasto_id=_parse_uuid(pasto_id),
+                observacao=observacao,
+            )
+        else:
+            schema = PesagemCreate(
+                animal_id=animal_id,
+                data_pesagem=dt_pesagem,
+                peso_kg=peso_dec,
+                observacao=observacao,
+            )
         create_pesagem_individual(db, schema)
         msg = urllib.parse.quote("Pesagem registrada com sucesso!")
         return RedirectResponse(url=f"{target_url}{sep}msg={msg}", status_code=303)
@@ -116,13 +133,18 @@ def delete_pesagem_submit(
 def pesagem_lote_form(
     request: Request,
     fazenda: str | None = Query(None),
+    db: Session = Depends(get_db),
 ) -> HTMLResponse:
     fazenda_val = (
         fazenda
         if fazenda in FazendaEnum._value2member_map_
         else FazendaEnum.TIZIU.value
     )
-    default_rows = [{"numero": "", "peso_kg": "", "observacao": ""} for _ in range(5)]
+    pasto_repo = PastoRepository(db)
+    default_rows = [
+        {"numero": "", "peso_kg": "", "pasto_id": "", "observacao": ""}
+        for _ in range(5)
+    ]
     return templates.TemplateResponse(
         request=request,
         name="pesagens/lote.html",
@@ -130,6 +152,7 @@ def pesagem_lote_form(
             "fazenda": fazenda_val,
             "data_pesagem": date.today().isoformat(),
             "observacao_padrao": "",
+            "pastos": pasto_repo.list_all(),
             "rows": default_rows,
             "error": None,
             "missing_numeros": set(),
@@ -149,16 +172,26 @@ def pesagem_lote_submit(
     observacao_padrao: str = Form(""),
     numeros: list[str] = Form(default=[]),
     pesos: list[str] = Form(default=[]),
+    pastos: list[str] = Form(default=[]),
     observacoes: list[str] = Form(default=[]),
     db: Session = Depends(get_db),
 ):
     rows: list[dict[str, str]] = []
-    max_len = max(len(numeros), len(pesos), len(observacoes), 1)
+    has_pastos_input = len(pastos) > 0
+    max_len = max(len(numeros), len(pesos), len(pastos), len(observacoes), 1)
     for i in range(max_len):
         num = numeros[i].strip() if i < len(numeros) else ""
         peso = pesos[i].strip() if i < len(pesos) else ""
+        pasto_str = pastos[i].strip() if i < len(pastos) else ""
         obs = observacoes[i].strip() if i < len(observacoes) else ""
-        rows.append({"numero": num, "peso_kg": peso, "observacao": obs})
+        rows.append(
+            {
+                "numero": num,
+                "peso_kg": peso,
+                "pasto_id": pasto_str,
+                "observacao": obs,
+            }
+        )
 
     # Filtra apenas linhas que tiveram algum campo preenchido
     filled_rows = [r for r in rows if r["numero"] or r["peso_kg"]]
@@ -194,13 +227,23 @@ def pesagem_lote_submit(
                     f"Linha {idx} (Animal nº {r['numero']}): o peso deve ser maior que zero."
                 )
 
-            itens_schema.append(
-                PesagemLoteItem(
-                    numero=r["numero"],
-                    peso_kg=peso_dec,
-                    observacao=r["observacao"] or None,
+            if has_pastos_input:
+                itens_schema.append(
+                    PesagemLoteItem(
+                        numero=r["numero"],
+                        peso_kg=peso_dec,
+                        pasto_id=_parse_uuid(r["pasto_id"]),
+                        observacao=r["observacao"] or None,
+                    )
                 )
-            )
+            else:
+                itens_schema.append(
+                    PesagemLoteItem(
+                        numero=r["numero"],
+                        peso_kg=peso_dec,
+                        observacao=r["observacao"] or None,
+                    )
+                )
 
         # Verifica quais números não existem para destacar visualmente no form em caso de erro
         repo = AnimalRepository(db)
@@ -236,8 +279,11 @@ def pesagem_lote_submit(
 
         display_rows = filled_rows if filled_rows else rows
         while len(display_rows) < 3:
-            display_rows.append({"numero": "", "peso_kg": "", "observacao": ""})
+            display_rows.append(
+                {"numero": "", "peso_kg": "", "pasto_id": "", "observacao": ""}
+            )
 
+        pasto_repo = PastoRepository(db)
         return templates.TemplateResponse(
             request=request,
             name="pesagens/lote.html",
@@ -245,6 +291,7 @@ def pesagem_lote_submit(
                 "fazenda": fazenda,
                 "data_pesagem": data_pesagem,
                 "observacao_padrao": observacao_padrao,
+                "pastos": pasto_repo.list_all(),
                 "rows": display_rows,
                 "error": error_msg,
                 "missing_numeros": missing_numeros,
@@ -280,6 +327,7 @@ def htmx_animal_lookup(
 
     cat_label = html.escape(animal.categoria.label)
     status_label = html.escape(animal.status.label)
+    pasto_id_attr = html.escape(str(animal.pasto_id) if animal.pasto_id else "")
     color_cls = (
         "text-emerald-700"
         if animal.status.value == "ativo"
@@ -287,7 +335,7 @@ def htmx_animal_lookup(
     )
     return HTMLResponse(
         content=(
-            f'<span class="inline-flex items-center gap-1 text-xs font-medium {color_cls}">'
+            f'<span data-pasto-id="{pasto_id_attr}" class="inline-flex items-center gap-1 text-xs font-medium {color_cls}">'
             f"✓ {cat_label} ({status_label})</span>"
         )
     )

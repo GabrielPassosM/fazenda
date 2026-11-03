@@ -10,6 +10,7 @@ from app.domain.models.base import Base
 
 if TYPE_CHECKING:
     from app.domain.models.animal import Animal
+    from app.domain.models.pasto import Pasto
 
 
 class Pesagem(Base):
@@ -24,6 +25,12 @@ class Pesagem(Base):
         Uuid(as_uuid=True),
         ForeignKey("animais.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+    pasto_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("pastos.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
     data_pesagem: Mapped[date] = mapped_column(
@@ -42,6 +49,10 @@ class Pesagem(Base):
 
     animal: Mapped["Animal"] = relationship(
         "Animal",
+        back_populates="pesagens",
+    )
+    pasto: Mapped["Pasto | None"] = relationship(
+        "Pasto",
         back_populates="pesagens",
     )
 

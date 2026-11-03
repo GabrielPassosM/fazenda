@@ -17,7 +17,10 @@ class AnimalRepository:
     def get_by_id(self, animal_id: uuid.UUID) -> Animal | None:
         stmt = (
             select(Animal)
-            .options(selectinload(Animal.pesagens), selectinload(Animal.pasto))
+            .options(
+                selectinload(Animal.pesagens).selectinload(Pesagem.pasto),
+                selectinload(Animal.pasto),
+            )
             .where(Animal.id == animal_id)
         )
         return self.db.scalar(stmt)
@@ -25,9 +28,13 @@ class AnimalRepository:
     def get_by_fazenda_and_numero(
         self, fazenda: FazendaEnum, numero: str
     ) -> Animal | None:
-        stmt = select(Animal).where(
-            Animal.fazenda == fazenda,
-            Animal.numero == numero.strip(),
+        stmt = (
+            select(Animal)
+            .options(selectinload(Animal.pasto))
+            .where(
+                Animal.fazenda == fazenda,
+                Animal.numero == numero.strip(),
+            )
         )
         return self.db.scalar(stmt)
 
@@ -43,6 +50,12 @@ class AnimalRepository:
         )
         animais = self.db.scalars(stmt).all()
         return {a.numero: a for a in animais}
+
+    def count_ativos(self) -> int:
+        stmt = select(func.count(Animal.id)).where(
+            Animal.status == StatusAnimalEnum.ATIVO
+        )
+        return self.db.scalar(stmt) or 0
 
     def list_paginated(
         self,

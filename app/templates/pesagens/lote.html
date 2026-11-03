@@ -106,6 +106,7 @@
                             <th scope="col" class="w-12 px-4 py-3 text-center">#</th>
                             <th scope="col" class="px-4 py-3">Nº do Animal *</th>
                             <th scope="col" class="px-4 py-3">Peso (kg) *</th>
+                            <th scope="col" class="px-4 py-3">Pasto (opcional)</th>
                             <th scope="col" class="px-4 py-3">Observação Individual (opcional)</th>
                             <th scope="col" class="w-12 px-4 py-3 text-center"></th>
                         </tr>
@@ -144,6 +145,19 @@
                                     placeholder="Ex: 340.50"
                                     class="peso-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
                                 >
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                <select
+                                    name="pastos"
+                                    class="pasto-select w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                                >
+                                    <option value="">Sem pasto definido</option>
+                                    {% for p in pastos %}
+                                    <option value="{{ p.id }}" {% if row.pasto_id == (p.id | string) %}selected{% endif %}>
+                                        {{ p.nome }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
                             </td>
                             <td class="px-4 py-3 align-top">
                                 <input
@@ -200,6 +214,10 @@ function updateRowIndices() {
 
 function addRows(count) {
     const tbody = document.getElementById('lote-tbody');
+    const firstSelect = tbody.querySelector('.pasto-select');
+    const pastoOptionsHtml = firstSelect
+        ? firstSelect.innerHTML
+        : '<option value="">Sem pasto definido</option>';
     for (let i = 0; i < count; i++) {
         const tr = document.createElement('tr');
         tr.className = 'lote-row';
@@ -228,6 +246,14 @@ function addRows(count) {
                 >
             </td>
             <td class="px-4 py-3 align-top">
+                <select
+                    name="pastos"
+                    class="pasto-select w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                >
+                    ${pastoOptionsHtml}
+                </select>
+            </td>
+            <td class="px-4 py-3 align-top">
                 <input
                     type="text"
                     name="observacoes"
@@ -247,6 +273,8 @@ function addRows(count) {
                 </button>
             </td>
         `;
+        const newSelect = tr.querySelector('.pasto-select');
+        if (newSelect) newSelect.value = '';
         tbody.appendChild(tr);
     }
     updateRowIndices();
@@ -259,6 +287,7 @@ function removeRow(btn) {
         // Se for a última linha, apenas limpa os campos
         const row = btn.closest('.lote-row');
         row.querySelectorAll('input').forEach(inp => inp.value = '');
+        row.querySelectorAll('select').forEach(sel => sel.value = '');
         const fb = row.querySelector('.lookup-feedback');
         if (fb) fb.innerHTML = '';
         return;
@@ -292,6 +321,12 @@ async function lookupAnimalRow(inputEl) {
             } else {
                 inputEl.classList.remove('border-rose-500', 'bg-rose-50');
                 inputEl.classList.add('border-slate-300');
+                const span = feedbackEl.querySelector('[data-pasto-id]');
+                const row = inputEl.closest('.lote-row');
+                const pastoSelect = row ? row.querySelector('.pasto-select') : null;
+                if (span && pastoSelect) {
+                    pastoSelect.value = span.getAttribute('data-pasto-id') || '';
+                }
             }
         }
     } catch (e) {

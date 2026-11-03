@@ -11,6 +11,7 @@ class PesagemCreate(BaseModel):
     animal_id: uuid.UUID
     data_pesagem: date
     peso_kg: Decimal = Field(..., gt=0)
+    pasto_id: uuid.UUID | None = None
     observacao: str | None = None
 
     @field_validator("observacao")
@@ -25,6 +26,7 @@ class PesagemCreate(BaseModel):
 class PesagemLoteItem(BaseModel):
     numero: str = Field(..., min_length=1, max_length=50)
     peso_kg: Decimal = Field(..., gt=0)
+    pasto_id: uuid.UUID | None = None
     observacao: str | None = None
 
     @field_validator("numero")

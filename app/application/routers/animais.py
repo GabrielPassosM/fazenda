@@ -93,6 +93,7 @@ def list_animais(
         name="animais/list.html",
         context={
             "paginated": paginated,
+            "total_ativos": repo.count_ativos(),
             "pastos": pasto_repo.list_all(),
             "filters": {
                 "q": q or "",

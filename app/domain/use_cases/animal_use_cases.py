@@ -40,6 +40,7 @@ def create_animal(db: Session, data: AnimalCreate) -> Animal:
     if data.peso_inicial_kg is not None:
         pesagem = Pesagem(
             animal_id=animal.id,
+            pasto_id=animal.pasto_id,
             data_pesagem=data.data_pesagem_inicial or data.data_entrada,
             peso_kg=data.peso_inicial_kg,
             observacao=data.observacao_pesagem,
