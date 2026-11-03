@@ -114,12 +114,18 @@ def test_individual_pesagem_updates_latest_weight_in_list(
     assert "205,75 kg" in list_resp.text
     assert "15/10/2026" in list_resp.text
 
-    # Nos detalhes devem aparecer ambas as pesagens e a evolução (+25,75 kg)
+    # Nos detalhes devem aparecer ambas as pesagens e a evolução (+25,75 kg), além da alternância Lista/Gráfico
     detail_resp = client.get(f"/animais/{animal.id}")
     assert detail_resp.status_code == 200
     assert "180,00 kg" in detail_resp.text
     assert "205,75 kg" in detail_resp.text
     assert "+25,75 kg" in detail_resp.text
+    assert 'id="btn-view-lista"' in detail_resp.text
+    assert 'id="btn-view-grafico"' in detail_resp.text
+    assert 'id="pesagens-view-lista"' in detail_resp.text
+    assert 'id="pesagens-view-grafico"' in detail_resp.text
+    assert 'id="pesagens-chart-svg"' in detail_resp.text
+    assert "PESAGENS_CHART_DATA" in detail_resp.text
 
 
 def test_pesagem_em_lote_success_and_missing_validation(
@@ -754,9 +760,18 @@ def test_seed_database_idempotent(
     # Segunda execução via __main__ deve ser idempotente e não duplicar registros
     runpy.run_path(seed.__file__, run_name="__main__")
 
+    # Simula animal existente sem pasto_id para cobrir backfill de pasto no seed
+    animal_repo = AnimalRepository(db_session)
+    existing_animal = animal_repo.get_by_fazenda_and_numero(FazendaEnum.TIZIU, "101")
+    assert existing_animal is not None
+    existing_animal.pasto_id = None
+    db_session.commit()
+
     animais_2, pesagens_2 = seed.seed_database(db_session)
     assert animais_2 == 0
     assert pesagens_2 == 0
+    db_session.refresh(existing_animal)
+    assert existing_animal.pasto_id is not None
 
 
 def test_pasto_crud_and_animal_relationship(
@@ -1000,6 +1015,170 @@ def test_pasto_crud_and_animal_relationship(
                 pasto_id=uuid.uuid4(),
             ),
         )
+
+
+def test_rodizio_pastos_em_lote_e_em_cadeia(
+    client: TestClient, db_session: Session
+) -> None:
+    from app.application.schemas.pasto import (
+        PastoCreate,
+        PastoRodizioCreate,
+        PastoTransferenciaItem,
+    )
+    from app.domain.use_cases.pasto_use_cases import create_pasto, rodar_pastos
+
+    pasto_a = create_pasto(db_session, PastoCreate(nome="Pasto A"))
+    pasto_b = create_pasto(db_session, PastoCreate(nome="Pasto B"))
+    pasto_c = create_pasto(db_session, PastoCreate(nome="Pasto C"))
+    pasto_vazio = create_pasto(db_session, PastoCreate(nome="Pasto Vazio"))
+
+    a1 = Animal(
+        numero="A1",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.VACA,
+        status=StatusAnimalEnum.ATIVO,
+        pasto_id=pasto_a.id,
+    )
+    a2 = Animal(
+        numero="A2",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.NOVILHA,
+        status=StatusAnimalEnum.ATIVO,
+        pasto_id=pasto_a.id,
+    )
+    b1 = Animal(
+        numero="B1",
+        fazenda=FazendaEnum.TIZIU,
+        data_entrada=date(2026, 10, 1),
+        categoria=CategoriaAnimalEnum.TOURO,
+        status=StatusAnimalEnum.ATIVO,
+        pasto_id=pasto_b.id,
+    )
+    db_session.add_all([a1, a2, b1])
+    db_session.commit()
+
+    # 1. Rodízio em cadeia: Pasto A (2 animais) -> Pasto B, e Pasto B (1 animal) -> Pasto C (vazio)
+    # Inclui uma linha em branco extra que deve ser ignorada
+    resp_cadeia = client.post(
+        "/pastos/rodizio",
+        data={
+            "origens": [str(pasto_a.id), str(pasto_b.id), ""],
+            "destinos": [str(pasto_b.id), str(pasto_c.id), ""],
+        },
+        follow_redirects=True,
+    )
+    assert resp_cadeia.status_code == 200
+    assert "Rodízio concluído (3 animais movimentados)" in resp_cadeia.text
+
+    db_session.expire_all()
+    animal_repo = AnimalRepository(db_session)
+    assert animal_repo.get_by_id(a1.id).pasto_id == pasto_b.id
+    assert animal_repo.get_by_id(a2.id).pasto_id == pasto_b.id
+    # O animal original do Pasto B foi para o Pasto C sem se misturar com os que vieram do Pasto A
+    assert animal_repo.get_by_id(b1.id).pasto_id == pasto_c.id
+
+    # 2. Troca circular direta: Pasto B (2 animais) <-> Pasto C (1 animal)
+    resp_ciclo = client.post(
+        "/pastos/rodizio",
+        data={
+            "origens": [str(pasto_b.id), str(pasto_c.id)],
+            "destinos": [str(pasto_c.id), str(pasto_b.id)],
+        },
+        follow_redirects=True,
+    )
+    assert resp_ciclo.status_code == 200
+    db_session.expire_all()
+    assert animal_repo.get_by_id(a1.id).pasto_id == pasto_c.id
+    assert animal_repo.get_by_id(a2.id).pasto_id == pasto_c.id
+    assert animal_repo.get_by_id(b1.id).pasto_id == pasto_b.id
+
+    # 3. Movimentação simples de 1 animal (verifica singular "1 animal movimentado")
+    resp_um = client.post(
+        "/pastos/rodizio",
+        data={
+            "origens": [str(pasto_b.id)],
+            "destinos": [str(pasto_a.id)],
+        },
+        follow_redirects=True,
+    )
+    assert resp_um.status_code == 200
+    assert "1 animal movimentado" in resp_um.text
+    db_session.expire_all()
+    assert animal_repo.get_by_id(b1.id).pasto_id == pasto_a.id
+
+    # 4. Validações de erro na rota POST /pastos/rodizio
+    # Sem etapas preenchidas
+    r_empty = client.post("/pastos/rodizio", data={"origens": [""], "destinos": [""]})
+    assert r_empty.status_code == 422
+    assert "Informe ao menos uma transferência" in r_empty.text
+
+    # Etapa incompleta (origem preenchida, destino vazio)
+    r_incomplete = client.post(
+        "/pastos/rodizio",
+        data={"origens": [str(pasto_a.id)], "destinos": [""]},
+    )
+    assert r_incomplete.status_code == 422
+    assert "selecione o pasto de origem e o pasto de destino" in r_incomplete.text
+
+    # UUID inválido
+    r_bad_uuid = client.post(
+        "/pastos/rodizio",
+        data={"origens": ["uuid-invalido"], "destinos": [str(pasto_b.id)]},
+    )
+    assert r_bad_uuid.status_code == 422
+    assert "Identificador de pasto inválido" in r_bad_uuid.text
+
+    # Origem igual ao destino
+    r_same = client.post(
+        "/pastos/rodizio",
+        data={"origens": [str(pasto_a.id)], "destinos": [str(pasto_a.id)]},
+    )
+    assert r_same.status_code == 422
+    assert "deve ser diferente do pasto de origem" in r_same.text
+
+    # Mesma origem repetida duas vezes no mesmo rodízio
+    r_dup_orig = client.post(
+        "/pastos/rodizio",
+        data={
+            "origens": [str(pasto_a.id), str(pasto_a.id)],
+            "destinos": [str(pasto_b.id), str(pasto_c.id)],
+        },
+    )
+    assert r_dup_orig.status_code == 422
+    assert "não pode ser transferido mais de uma vez" in r_dup_orig.text
+
+    # Pasto de origem vazio (sem animais alocados)
+    r_empty_pasto = client.post(
+        "/pastos/rodizio",
+        data={"origens": [str(pasto_vazio.id)], "destinos": [str(pasto_a.id)]},
+    )
+    assert r_empty_pasto.status_code == 422
+    assert "não possui animais alocados" in r_empty_pasto.text
+
+    # Pasto de origem inexistente -> NotFoundError tratado como 422
+    r_missing_orig = client.post(
+        "/pastos/rodizio",
+        data={"origens": [str(uuid.uuid4())], "destinos": [str(pasto_a.id)]},
+    )
+    assert r_missing_orig.status_code == 422
+    assert "Pasto de origem não encontrado" in r_missing_orig.text
+
+    # Pasto de destino inexistente -> NotFoundError
+    with pytest.raises(NotFoundError):
+        rodar_pastos(
+            db_session,
+            PastoRodizioCreate(
+                etapas=[
+                    PastoTransferenciaItem(
+                        pasto_origem_id=pasto_a.id,
+                        pasto_destino_id=uuid.uuid4(),
+                    )
+                ]
+            ),
+        )
+
 
 
 

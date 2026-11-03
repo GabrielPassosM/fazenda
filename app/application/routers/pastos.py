@@ -6,13 +6,19 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.application.schemas.pasto import PastoCreate, PastoUpdate
+from app.application.schemas.pasto import (
+    PastoCreate,
+    PastoRodizioCreate,
+    PastoTransferenciaItem,
+    PastoUpdate,
+)
 from app.application.templating import templates
 from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.use_cases.exceptions import DomainError, NotFoundError
 from app.domain.use_cases.pasto_use_cases import (
     create_pasto,
     delete_pasto,
+    rodar_pastos,
     update_pasto,
 )
 from app.infrastructure.database import get_db
@@ -70,6 +76,73 @@ def create_pasto_submit(
             },
             status_code=422,
         )
+
+
+@router.post(
+    "/pastos/rodizio",
+    response_class=HTMLResponse,
+    summary="Rodar/transferir animais entre pastos em lote (em cadeia)",
+)
+def rodizio_pastos_submit(
+    request: Request,
+    origens: list[str] = Form(default=[]),
+    destinos: list[str] = Form(default=[]),
+    db: Session = Depends(get_db),
+):
+    try:
+        max_len = max(len(origens), len(destinos))
+        etapas: list[PastoTransferenciaItem] = []
+
+        for idx in range(max_len):
+            orig_str = origens[idx].strip() if idx < len(origens) else ""
+            dest_str = destinos[idx].strip() if idx < len(destinos) else ""
+
+            if not orig_str and not dest_str:
+                continue
+            if not orig_str or not dest_str:
+                raise DomainError(
+                    f"Etapa {idx + 1}: selecione o pasto de origem e o pasto de destino."
+                )
+
+            etapas.append(
+                PastoTransferenciaItem(
+                    pasto_origem_id=uuid.UUID(orig_str),
+                    pasto_destino_id=uuid.UUID(dest_str),
+                )
+            )
+
+        if not etapas:
+            raise DomainError("Informe ao menos uma transferência de pasto para realizar o rodízio.")
+
+        schema = PastoRodizioCreate(etapas=etapas)
+        resultado = rodar_pastos(db, schema)
+        resumo = "; ".join(resultado.resumo_etapas)
+        label_mov = "animal movimentado" if resultado.total_animais_movidos == 1 else "animais movimentados"
+        msg = urllib.parse.quote(
+            f"Rodízio concluído ({resultado.total_animais_movidos} {label_mov}): {resumo}."
+        )
+        return RedirectResponse(url=f"/pastos?msg={msg}", status_code=303)
+
+    except (DomainError, NotFoundError, ValueError) as exc:
+        if isinstance(exc, (DomainError, NotFoundError)):
+            error_msg = exc.message
+        else:
+            error_msg = "Identificador de pasto inválido no rodízio."
+
+        repo = PastoRepository(db)
+        items = repo.list_with_counts()
+        return templates.TemplateResponse(
+            request=request,
+            name="pastos/list.html",
+            context={
+                "items": items,
+                "form_data": {"nome": ""},
+                "msg": None,
+                "error": error_msg,
+            },
+            status_code=422,
+        )
+
 
 
 @router.get(

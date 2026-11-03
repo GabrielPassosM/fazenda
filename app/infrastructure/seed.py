@@ -70,6 +70,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.NOVILHA,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(240),
+            "pasto": "Pasto da Represa",
             "observacoes": "Aptidão para futura matriz.",
             "pesagens": [
                 {"data_pesagem": days_ago(240), "peso_kg": Decimal("275.00"), "observacao": "Peso de entrada"},
@@ -84,6 +85,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.NOVILHA,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(180),
+            "pasto": "Piquete Rotacionado 1",
             "observacoes": "Cruzamento industrial Angus x Nelore.",
             "pesagens": [
                 {"data_pesagem": days_ago(180), "peso_kg": Decimal("290.00"), "observacao": "Entrada no piquete 3"},
@@ -97,6 +99,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.VACA,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(400),
+            "pasto": "Piquete Maternidade",
             "observacoes": "Matriz multipara, mansa de curral.",
             "pesagens": [
                 {"data_pesagem": days_ago(400), "peso_kg": Decimal("440.00"), "observacao": "Peso inicial de cadastro"},
@@ -110,6 +113,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.TOURO,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(500),
+            "pasto": "Pasto da Represa",
             "observacoes": "Reprodutor Nelore PO - Exame andrológico aprovado.",
             "pesagens": [
                 {"data_pesagem": days_ago(365), "peso_kg": Decimal("720.00"), "observacao": "Pré-estação de monta"},
@@ -123,6 +127,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.NOVILHA,
             "status": StatusAnimalEnum.ABATIDO,
             "data_entrada": days_ago(300),
+            "pasto": "Pasto Curral",
             "observacoes": "Terminação em semiconfinamento. Abate frigorífico regional.",
             "pesagens": [
                 {"data_pesagem": days_ago(300), "peso_kg": Decimal("310.00"), "observacao": "Peso de entrada"},
@@ -137,6 +142,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.BEZERRO,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(110),
+            "pasto": "Pasto Curral",
             "observacoes": "Bezerro de desmama precoce.",
             "pesagens": [
                 {"data_pesagem": days_ago(110), "peso_kg": Decimal("178.00"), "observacao": "Peso de entrada"},
@@ -149,6 +155,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.BEZERRO,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(75),
+            "pasto": "Piquete Rotacionado 1",
             "observacoes": "Adquirido em leilão regional.",
             "pesagens": [
                 {"data_pesagem": days_ago(75), "peso_kg": Decimal("205.00"), "observacao": "Recepção na fazenda"},
@@ -161,6 +168,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.NOVILHA,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(210),
+            "pasto": "Pasto da Baixada",
             "observacoes": "Lote cabeceira de recria.",
             "pesagens": [
                 {"data_pesagem": days_ago(210), "peso_kg": Decimal("265.00"), "observacao": "Peso inicial"},
@@ -174,6 +182,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.VACA,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(450),
+            "pasto": "Piquete Maternidade",
             "observacoes": "Matriz leiteira/corte mista.",
             "pesagens": [
                 {"data_pesagem": days_ago(300), "peso_kg": Decimal("460.00"), "observacao": "Pesagem de inverno"},
@@ -187,6 +196,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.VACA,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(380),
+            "pasto": "Pasto da Represa",
             "observacoes": "Matriz Nelore mocho.",
             "pesagens": [
                 {"data_pesagem": days_ago(250), "peso_kg": Decimal("430.00"), "observacao": "Entrada no lote de cria"},
@@ -199,6 +209,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.TOURO,
             "status": StatusAnimalEnum.ATIVO,
             "data_entrada": days_ago(600),
+            "pasto": "Pasto da Represa",
             "observacoes": "Touro repasse Tabapuã.",
             "pesagens": [
                 {"data_pesagem": days_ago(240), "peso_kg": Decimal("680.00"), "observacao": "Avaliação semestral"},
@@ -211,6 +222,7 @@ def get_seed_data() -> list[dict]:
             "categoria": CategoriaAnimalEnum.BEZERRO,
             "status": StatusAnimalEnum.MORTO,
             "data_entrada": days_ago(160),
+            "pasto": "Pasto da Baixada",
             "observacoes": "Óbito por acidente ofídico no pasto da baixada.",
             "pesagens": [
                 {"data_pesagem": days_ago(160), "peso_kg": Decimal("170.00"), "observacao": "Peso de entrada"},
@@ -239,12 +251,14 @@ def seed_database(db: Session) -> tuple[int, int]:
     pesagens_criadas = 0
 
     for item in get_seed_data():
-        existing = animal_repo.get_by_fazenda_and_numero(item["fazenda"], item["numero"])
-        if existing is not None:
-            continue
-
         pasto_nome = item.get("pasto")
         pasto_ref = pastos_map.get(pasto_nome) if pasto_nome else None
+
+        existing = animal_repo.get_by_fazenda_and_numero(item["fazenda"], item["numero"])
+        if existing is not None:
+            if existing.pasto_id is None and pasto_ref is not None:
+                existing.pasto_id = pasto_ref.id
+            continue
 
         animal = Animal(
             numero=item["numero"],

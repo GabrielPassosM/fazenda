@@ -9,6 +9,9 @@ from app.application.schemas.animal import (
 from app.application.schemas.pasto import (
     PastoCreate,
     PastoListItem,
+    PastoRodizioCreate,
+    PastoRodizioResult,
+    PastoTransferenciaItem,
     PastoUpdate,
 )
 from app.application.schemas.pesagem import (
@@ -33,6 +36,9 @@ __all__ = [
     "PastoCreate",
     "PastoUpdate",
     "PastoListItem",
+    "PastoTransferenciaItem",
+    "PastoRodizioCreate",
+    "PastoRodizioResult",
     "PesagemCreate",
     "PesagemLoteItem",
     "PesagemLoteCreate",

@@ -7,6 +7,7 @@ from app.domain.use_cases.exceptions import DomainError, NotFoundError
 from app.domain.use_cases.pasto_use_cases import (
     create_pasto,
     delete_pasto,
+    rodar_pastos,
     update_pasto,
 )
 from app.domain.use_cases.pesagem_use_cases import (
@@ -24,6 +25,7 @@ __all__ = [
     "create_pasto",
     "update_pasto",
     "delete_pasto",
+    "rodar_pastos",
     "create_pesagem_individual",
     "create_pesagens_em_lote",
     "delete_pesagem",

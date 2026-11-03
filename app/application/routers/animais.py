@@ -240,13 +240,33 @@ def detail_animal(
             }
         )
 
+    # Dados em ordem cronológica (da mais antiga para a mais recente) para o gráfico
+    pesagens_grafico = [
+        {
+            "data": item["pesagem"].data_pesagem.strftime("%d/%m/%Y"),
+            "peso_kg": float(item["pesagem"].peso_kg),
+            "variacao_kg": float(item["variacao_kg"]) if item["variacao_kg"] is not None else None,
+            "pasto": item["pesagem"].pasto.nome if item["pesagem"].pasto else None,
+            "observacao": item["pesagem"].observacao or None,
+        }
+        for item in reversed(pesagens_com_variacao)
+    ]
+    ganho_total_kg = (
+        (pesagens_list[0].peso_kg - pesagens_list[-1].peso_kg)
+        if len(pesagens_list) >= 2
+        else None
+    )
+
     return templates.TemplateResponse(
         request=request,
         name="animais/detail.html",
         context={
             "animal": animal,
             "pesagens_com_variacao": pesagens_com_variacao,
+            "pesagens_grafico": pesagens_grafico,
+            "primeira_pesagem": pesagens_list[-1] if pesagens_list else None,
             "ultima_pesagem": pesagens_list[0] if pesagens_list else None,
+            "ganho_total_kg": ganho_total_kg,
             "today": date.today().isoformat(),
             "msg": msg,
             "error": error,

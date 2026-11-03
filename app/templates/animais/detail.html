@@ -104,13 +104,47 @@
 
     <!-- Histórico de Pesagens -->
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs">
-        <div class="border-b border-slate-200 px-5 py-4 flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-900">Histórico de Pesagens</h2>
-            <span class="text-xs text-slate-500">Da mais recente para a mais antiga</span>
+        <div class="border-b border-slate-200 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-base font-bold text-slate-900">Histórico de Pesagens</h2>
+                <span id="pesagens-subtitle" class="text-xs text-slate-500">Da mais recente para a mais antiga</span>
+            </div>
+
+            {% if pesagens_com_variacao %}
+            <div class="inline-flex self-start rounded-lg border border-slate-200 bg-slate-100 p-1 sm:self-auto" role="tablist" aria-label="Visualização do histórico de pesagens">
+                <button
+                    type="button"
+                    id="btn-view-lista"
+                    role="tab"
+                    aria-selected="true"
+                    onclick="setPesagensView('lista')"
+                    class="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 shadow-2xs transition cursor-pointer"
+                >
+                    <svg class="h-3.5 w-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    Lista
+                </button>
+                <button
+                    type="button"
+                    id="btn-view-grafico"
+                    role="tab"
+                    aria-selected="false"
+                    onclick="setPesagensView('grafico')"
+                    class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer"
+                >
+                    <svg class="h-3.5 w-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7" />
+                    </svg>
+                    Gráfico
+                </button>
+            </div>
+            {% endif %}
         </div>
 
         {% if pesagens_com_variacao %}
-        <div class="overflow-x-auto">
+        <!-- Visão em Lista -->
+        <div id="pesagens-view-lista" class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <tr>
@@ -180,6 +214,58 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Visão em Gráfico -->
+        <div id="pesagens-view-grafico" class="hidden p-5 space-y-5">
+            <!-- Resumo Rápido da Evolução -->
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div class="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
+                    <span class="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">1ª Pesagem</span>
+                    <span class="mt-0.5 block text-base font-bold text-slate-900">{{ primeira_pesagem.peso_kg | format_peso }}</span>
+                    <span class="text-xs text-slate-500">em {{ primeira_pesagem.data_pesagem | format_date }}</span>
+                </div>
+
+                <div class="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
+                    <span class="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Pesagem Atual</span>
+                    <span class="mt-0.5 block text-base font-bold text-slate-900">{{ ultima_pesagem.peso_kg | format_peso }}</span>
+                    <span class="text-xs text-slate-500">em {{ ultima_pesagem.data_pesagem | format_date }}</span>
+                </div>
+
+                <div class="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
+                    <span class="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Variação Acumulada</span>
+                    {% if ganho_total_kg is none %}
+                    <span class="mt-0.5 block text-sm font-medium text-slate-400">Apenas 1 pesagem registrada</span>
+                    {% elif ganho_total_kg > 0 %}
+                    <span class="mt-0.5 block text-base font-bold text-emerald-700">+{{ ganho_total_kg | format_peso }}</span>
+                    <span class="text-xs text-emerald-700">Ganho no período</span>
+                    {% elif ganho_total_kg < 0 %}
+                    <span class="mt-0.5 block text-base font-bold text-rose-600">{{ ganho_total_kg | format_peso }}</span>
+                    <span class="text-xs text-rose-600">Perda no período</span>
+                    {% else %}
+                    <span class="mt-0.5 block text-base font-bold text-slate-700">0,00 kg</span>
+                    <span class="text-xs text-slate-500">Estável no período</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Área do Gráfico SVG -->
+            <div class="relative rounded-xl border border-slate-100 bg-slate-50/40 p-4">
+                <div id="pesagens-chart-container" class="w-full overflow-x-auto">
+                    <svg
+                        id="pesagens-chart-svg"
+                        viewBox="0 0 760 280"
+                        class="w-full min-w-[480px] h-auto select-none"
+                        role="img"
+                        aria-label="Gráfico de evolução de peso do animal {{ animal.numero }}"
+                    ></svg>
+                </div>
+
+                <!-- Card de detalhes do ponto selecionado / hover -->
+                <div id="pesagens-chart-tooltip" class="mt-3 hidden rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-xs text-slate-800 sm:flex sm:items-center sm:justify-between gap-3">
+                    <div id="pesagens-chart-tooltip-content" class="flex flex-wrap items-center gap-x-4 gap-y-1"></div>
+                </div>
+            </div>
+        </div>
         {% else %}
         <div class="px-6 py-10 text-center text-sm text-slate-500">
             Nenhuma pesagem registrada para este animal até o momento.
@@ -187,5 +273,195 @@
         {% endif %}
     </div>
 </div>
+
+{% if pesagens_com_variacao %}
+<script>
+const PESAGENS_CHART_DATA = {{ pesagens_grafico | tojson }};
+
+function formatKgPtBr(val) {
+    const num = Number(val);
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg';
+}
+
+function setPesagensView(mode) {
+    const viewLista = document.getElementById('pesagens-view-lista');
+    const viewGrafico = document.getElementById('pesagens-view-grafico');
+    const btnLista = document.getElementById('btn-view-lista');
+    const btnGrafico = document.getElementById('btn-view-grafico');
+    const subtitle = document.getElementById('pesagens-subtitle');
+
+    const activeClasses = ['bg-white', 'text-slate-900', 'shadow-2xs'];
+    const inactiveClasses = ['text-slate-600', 'hover:text-slate-900'];
+
+    if (mode === 'grafico') {
+        viewLista.classList.add('hidden');
+        viewGrafico.classList.remove('hidden');
+        btnGrafico.classList.add(...activeClasses);
+        btnGrafico.classList.remove(...inactiveClasses);
+        btnGrafico.setAttribute('aria-selected', 'true');
+        btnLista.classList.remove(...activeClasses);
+        btnLista.classList.add(...inactiveClasses);
+        btnLista.setAttribute('aria-selected', 'false');
+        if (subtitle) subtitle.textContent = 'Evolução cronológica do peso (da mais antiga para a mais recente)';
+        renderPesagensChart();
+    } else {
+        viewGrafico.classList.add('hidden');
+        viewLista.classList.remove('hidden');
+        btnLista.classList.add(...activeClasses);
+        btnLista.classList.remove(...inactiveClasses);
+        btnLista.setAttribute('aria-selected', 'true');
+        btnGrafico.classList.remove(...activeClasses);
+        btnGrafico.classList.add(...inactiveClasses);
+        btnGrafico.setAttribute('aria-selected', 'false');
+        if (subtitle) subtitle.textContent = 'Da mais recente para a mais antiga';
+    }
+}
+
+function showPointDetails(index) {
+    const item = PESAGENS_CHART_DATA[index];
+    const tooltip = document.getElementById('pesagens-chart-tooltip');
+    const content = document.getElementById('pesagens-chart-tooltip-content');
+    if (!item || !tooltip || !content) return;
+
+    let variacaoHtml = '<span class="text-slate-500">1ª pesagem</span>';
+    if (item.variacao_kg !== null && item.variacao_kg !== undefined) {
+        if (item.variacao_kg > 0) {
+            variacaoHtml = `<span class="font-semibold text-emerald-700">+${formatKgPtBr(item.variacao_kg)}</span>`;
+        } else if (item.variacao_kg < 0) {
+            variacaoHtml = `<span class="font-semibold text-rose-600">${formatKgPtBr(item.variacao_kg)}</span>`;
+        } else {
+            variacaoHtml = `<span class="font-semibold text-slate-600">0,00 kg</span>`;
+        }
+    }
+
+    const pastoText = item.pasto ? `<span><strong>Pasto:</strong> ${item.pasto}</span>` : '';
+    const obsText = item.observacao ? `<span><strong>Obs:</strong> ${item.observacao}</span>` : '';
+
+    content.innerHTML = `
+        <span><strong>Data:</strong> ${item.data}</span>
+        <span><strong>Peso:</strong> <span class="font-bold text-emerald-950">${formatKgPtBr(item.peso_kg)}</span></span>
+        <span><strong>Evolução:</strong> ${variacaoHtml}</span>
+        ${pastoText}
+        ${obsText}
+    `;
+    tooltip.classList.remove('hidden');
+}
+
+function renderPesagensChart() {
+    const svg = document.getElementById('pesagens-chart-svg');
+    if (!svg || !PESAGENS_CHART_DATA.length) return;
+
+    const width = 760;
+    const height = 280;
+    const padLeft = 72;
+    const padRight = 36;
+    const padTop = 34;
+    const padBottom = 46;
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+
+    const weights = PESAGENS_CHART_DATA.map(d => d.peso_kg);
+    const minW = Math.min(...weights);
+    const maxW = Math.max(...weights);
+    const spread = maxW - minW;
+    const margin = spread > 0 ? spread * 0.18 : Math.max(maxW * 0.1, 10);
+    const yMin = Math.max(0, minW - margin);
+    const yMax = maxW + margin;
+    const yRange = yMax - yMin || 1;
+
+    const getX = (i) => {
+        if (PESAGENS_CHART_DATA.length === 1) return padLeft + plotW / 2;
+        return padLeft + (i / (PESAGENS_CHART_DATA.length - 1)) * plotW;
+    };
+    const getY = (w) => padTop + plotH - ((w - yMin) / yRange) * plotH;
+
+    let html = `
+        <defs>
+            <linearGradient id="pesoAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+            </linearGradient>
+        </defs>
+    `;
+
+    // Linhas de grade horizontais (5 níveis)
+    const gridSteps = 4;
+    for (let s = 0; s <= gridSteps; s++) {
+        const val = yMin + (yRange * (gridSteps - s)) / gridSteps;
+        const y = padTop + (plotH * s) / gridSteps;
+        const label = Math.round(val).toLocaleString('pt-BR') + ' kg';
+        html += `
+            <line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${width - padRight}" y2="${y.toFixed(1)}"
+                stroke="#e2e8f0" stroke-dasharray="4 4" stroke-width="1" />
+            <text x="${padLeft - 10}" y="${(y + 4).toFixed(1)}"
+                text-anchor="end" class="fill-slate-400 text-[11px] font-medium">${label}</text>
+        `;
+    }
+
+    const coords = PESAGENS_CHART_DATA.map((d, i) => ({
+        x: getX(i),
+        y: getY(d.peso_kg),
+        data: d,
+        index: i
+    }));
+
+    // Área e linha de evolução quando há 2 ou mais pesagens
+    if (coords.length >= 2) {
+        const linePoints = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+        const firstX = coords[0].x.toFixed(1);
+        const lastX = coords[coords.length - 1].x.toFixed(1);
+        const baseY = (padTop + plotH).toFixed(1);
+        const areaPoints = `${firstX},${baseY} ${linePoints} ${lastX},${baseY}`;
+
+        html += `<polygon points="${areaPoints}" fill="url(#pesoAreaGrad)" />`;
+        html += `<polyline points="${linePoints}" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`;
+    } else if (coords.length === 1) {
+        // Linha guia pontilhada quando há apenas 1 pesagem
+        const c = coords[0];
+        html += `<line x1="${padLeft}" y1="${c.y.toFixed(1)}" x2="${width - padRight}" y2="${c.y.toFixed(1)}" stroke="#10b981" stroke-dasharray="3 3" stroke-width="1.5" />`;
+    }
+
+    // Define frequência de rótulos para não sobrepor quando houver muitos registros
+    const labelStep = Math.max(1, Math.ceil(coords.length / 8));
+
+    coords.forEach((c, idx) => {
+        const showLabel = idx === 0 || idx === coords.length - 1 || idx % labelStep === 0;
+        const pesoCurto = Number(c.data.peso_kg).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' kg';
+
+        if (showLabel) {
+            // Data no eixo X
+            html += `
+                <text x="${c.x.toFixed(1)}" y="${height - 14}"
+                    text-anchor="middle" class="fill-slate-500 text-[11px] font-medium">${c.data.data}</text>
+            `;
+            // Rótulo de peso acima do ponto
+            html += `
+                <text x="${c.x.toFixed(1)}" y="${(c.y - 12).toFixed(1)}"
+                    text-anchor="middle" class="fill-slate-800 text-[11px] font-bold">${pesoCurto}</text>
+            `;
+        }
+
+        // Ponto interativo
+        html += `
+            <g class="cursor-pointer" onmouseenter="showPointDetails(${idx})" onclick="showPointDetails(${idx})">
+                <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="12" fill="transparent" />
+                <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="5.5" fill="#059669" stroke="#ffffff" stroke-width="2.5" />
+            </g>
+        `;
+    });
+
+    svg.innerHTML = html;
+    showPointDetails(coords.length - 1);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderPesagensChart();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'grafico') {
+        setPesagensView('grafico');
+    }
+});
+</script>
+{% endif %}
 {% endblock %}
 

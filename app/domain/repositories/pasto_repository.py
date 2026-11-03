@@ -40,6 +40,10 @@ class PastoRepository:
             for row in rows
         ]
 
+    def get_animal_ids_by_pasto(self, pasto_id: uuid.UUID) -> list[uuid.UUID]:
+        stmt = select(Animal.id).where(Animal.pasto_id == pasto_id)
+        return list(self.db.scalars(stmt).all())
+
     def create(self, pasto: Pasto) -> Pasto:
         self.db.add(pasto)
         self.db.flush()
