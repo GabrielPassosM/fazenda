@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from app.application.schemas.animal import (
     AnimalCreate,
     AnimalListItem,
+    AnimalLoteCreate,
+    AnimalLoteItem,
     AnimalUpdate,
     PaginatedAnimais,
 )
@@ -31,6 +33,8 @@ class HealthResponse(BaseModel):
 __all__ = [
     "HealthResponse",
     "AnimalCreate",
+    "AnimalLoteItem",
+    "AnimalLoteCreate",
     "AnimalUpdate",
     "AnimalListItem",
     "PaginatedAnimais",

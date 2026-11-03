@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Animais em Lote | {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+    <div>
+        <a href="/" class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800">
+            ← Voltar para a listagem do rebanho
+        </a>
+        <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+            Cadastro de Animais em Lote
+        </h1>
+        <p class="mt-1 text-sm text-slate-600">
+            Cadastre múltiplos animais já com o primeiro peso. Todos serão registrados como <span class="font-semibold text-slate-800">Vaca</span> com status <span class="font-semibold text-emerald-700">Ativo</span> e contabilizados como pesagem em lote.
+        </p>
+    </div>
+
+    <form method="post" action="/animais/lote" id="animais-lote-form" class="space-y-6">
+        <!-- Dados Gerais do Lote -->
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
+            <h2 class="text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
+                1. Dados do Lote
+            </h2>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="lote-fazenda" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                        Fazenda *
+                    </label>
+                    <select
+                        id="lote-fazenda"
+                        name="fazenda"
+                        required
+                        class="w-full appearance-none rounded-lg border border-slate-300 bg-white pl-3 pr-10 py-2 text-sm font-medium text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                    >
+                        {% for f in FazendaEnum %}
+                        <option value="{{ f.value }}" {% if fazenda == f.value %}selected{% endif %}>
+                            {{ f.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="lote-data" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">
+                        Data (Entrada e Pesagem) *
+                    </label>
+                    <input
+                        id="lote-data"
+                        type="date"
+                        name="data"
+                        value="{{ data }}"
+                        required
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                    >
+                </div>
+            </div>
+        </div>
+
+        <!-- Linhas de Animais e Primeiro Peso -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
+                <div>
+                    <h2 class="text-sm font-bold uppercase tracking-wide text-slate-500">
+                        2. Animais e Primeiro Peso
+                    </h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onclick="addRows(1)"
+                        class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    >
+                        + 1 Linha
+                    </button>
+                    <button
+                        type="button"
+                        onclick="addRows(5)"
+                        class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    >
+                        + 5 Linhas
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+                    <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <tr>
+                            <th scope="col" class="w-12 px-4 py-3 text-center">#</th>
+                            <th scope="col" class="px-4 py-3">Nº do Animal *</th>
+                            <th scope="col" class="px-4 py-3">Peso (kg) *</th>
+                            <th scope="col" class="w-12 px-4 py-3 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="lote-tbody" class="divide-y divide-slate-200 bg-white">
+                        {% for row in rows %}
+                        {% set is_duplicate = row.numero in duplicate_numeros %}
+                        <tr class="lote-row">
+                            <td class="row-index px-4 py-3 text-center text-xs font-semibold text-slate-400">
+                                {{ loop.index }}
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                <input
+                                    type="text"
+                                    name="numeros"
+                                    value="{{ row.numero }}"
+                                    placeholder="Ex: 104"
+                                    class="numero-input w-full rounded-lg border {% if is_duplicate %}border-rose-500 bg-rose-50{% else %}border-slate-300{% endif %} px-3 py-2 font-mono text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                                >
+                            </td>
+                            <td class="px-4 py-3 align-top">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    name="pesos"
+                                    value="{{ row.peso_kg }}"
+                                    placeholder="Ex: 420.50"
+                                    class="peso-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                                >
+                            </td>
+                            <td class="px-4 py-3 text-center align-top">
+                                <button
+                                    type="button"
+                                    onclick="removeRow(this)"
+                                    title="Remover linha"
+                                    class="mt-1.5 rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="flex items-center justify-end gap-3">
+            <a
+                href="/"
+                class="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+                Cancelar
+            </a>
+            <button
+                type="submit"
+                class="rounded-lg bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white shadow-2xs transition hover:bg-emerald-800 cursor-pointer"
+            >
+                Cadastrar Animais em Lote
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateRowIndices() {
+    const rows = document.querySelectorAll('#lote-tbody .lote-row');
+    rows.forEach((row, idx) => {
+        const indexCell = row.querySelector('.row-index');
+        if (indexCell) indexCell.textContent = idx + 1;
+    });
+}
+
+function addRows(count) {
+    const tbody = document.getElementById('lote-tbody');
+    for (let i = 0; i < count; i++) {
+        const tr = document.createElement('tr');
+        tr.className = 'lote-row';
+        tr.innerHTML = `
+            <td class="row-index px-4 py-3 text-center text-xs font-semibold text-slate-400"></td>
+            <td class="px-4 py-3 align-top">
+                <input
+                    type="text"
+                    name="numeros"
+                    value=""
+                    placeholder="Ex: 104"
+                    class="numero-input w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                >
+            </td>
+            <td class="px-4 py-3 align-top">
+                <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    name="pesos"
+                    value=""
+                    placeholder="Ex: 420.50"
+                    class="peso-input w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                >
+            </td>
+            <td class="px-4 py-3 text-center align-top">
+                <button
+                    type="button"
+                    onclick="removeRow(this)"
+                    title="Remover linha"
+                    class="mt-1.5 rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                >
+                    ✕
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    }
+    updateRowIndices();
+}
+
+function removeRow(btn) {
+    const tbody = document.getElementById('lote-tbody');
+    const rows = tbody.querySelectorAll('.lote-row');
+    if (rows.length <= 1) {
+        const row = btn.closest('.lote-row');
+        row.querySelectorAll('input').forEach(inp => inp.value = '');
+        return;
+    }
+    btn.closest('.lote-row').remove();
+    updateRowIndices();
+}
+</script>
+{% endblock %}
+

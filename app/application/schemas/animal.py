@@ -72,6 +72,25 @@ class AnimalUpdate(BaseModel):
         return cleaned if cleaned else None
 
 
+class AnimalLoteItem(BaseModel):
+    numero: str = Field(..., min_length=1, max_length=50)
+    peso_kg: Decimal = Field(..., gt=0)
+
+    @field_validator("numero")
+    @classmethod
+    def clean_numero(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("O número do animal é obrigatório.")
+        return cleaned
+
+
+class AnimalLoteCreate(BaseModel):
+    fazenda: FazendaEnum
+    data: date
+    itens: list[AnimalLoteItem] = Field(..., min_length=1)
+
+
 @dataclass
 class AnimalListItem:
     animal: Animal

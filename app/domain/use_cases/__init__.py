@@ -1,4 +1,5 @@
 from app.domain.use_cases.animal_use_cases import (
+    create_animais_em_lote,
     create_animal,
     delete_animal,
     update_animal,
@@ -20,6 +21,7 @@ __all__ = [
     "DomainError",
     "NotFoundError",
     "create_animal",
+    "create_animais_em_lote",
     "update_animal",
     "delete_animal",
     "create_pasto",

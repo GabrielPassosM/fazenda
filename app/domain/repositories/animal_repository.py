@@ -190,6 +190,11 @@ class AnimalRepository:
         self.db.flush()
         return animal
 
+    def create_many(self, animais: list[Animal]) -> list[Animal]:
+        self.db.add_all(animais)
+        self.db.flush()
+        return animais
+
     def delete(self, animal: Animal) -> None:
         self.db.delete(animal)
         self.db.flush()

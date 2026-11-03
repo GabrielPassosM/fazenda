@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.application.routers.animais import _parse_decimal as animais_parse_decimal
 from app.application.routers.pesagens import _parse_decimal as pesagens_parse_decimal
-from app.application.schemas.animal import AnimalCreate, AnimalUpdate
+from app.application.schemas.animal import (
+    AnimalCreate,
+    AnimalLoteCreate,
+    AnimalLoteItem,
+    AnimalUpdate,
+)
 from app.application.schemas.pesagem import (
     PesagemCreate,
     PesagemLoteCreate,
@@ -1506,6 +1511,194 @@ def test_historico_pesagens_em_lote_columns_and_ignore_individual(
     assert "2 animais" in hist_resp.text
     assert "250,00 kg" in hist_resp.text
     assert "Pesagem Outubro Tiziu" in hist_resp.text
+
+
+def test_create_animais_em_lote_success_and_validations(
+    client: TestClient, db_session: Session
+) -> None:
+    # 1. GET /animais/lote exibe apenas os inputs essenciais (fazenda, data, numeros, pesos)
+    get_resp = client.get("/animais/lote?fazenda=ns_penha")
+    assert get_resp.status_code == 200
+    assert "Cadastro de Animais em Lote" in get_resp.text
+    assert 'name="fazenda"' in get_resp.text
+    assert 'name="data"' in get_resp.text
+    assert 'name="numeros"' in get_resp.text
+    assert 'name="pesos"' in get_resp.text
+    assert 'name="categoria"' not in get_resp.text
+    assert 'name="status"' not in get_resp.text
+    assert 'name="pastos"' not in get_resp.text
+
+    # 2. Cria lote de animais com peso inicial (e ignora linha vazia)
+    post_ok = client.post(
+        "/animais/lote",
+        data={
+            "fazenda": "tiziu",
+            "data": "2026-11-02",
+            "numeros": ["VL-01", "VL-02", ""],
+            "pesos": ["410.00", "450.50", ""],
+        },
+        follow_redirects=True,
+    )
+    assert post_ok.status_code == 200
+    assert "2 animais cadastrados em lote com sucesso!" in post_ok.text
+    assert "VL-01" in post_ok.text
+    assert "VL-02" in post_ok.text
+    assert "410,00 kg" in post_ok.text
+    assert "450,50 kg" in post_ok.text
+
+    # 3. Verifica dados no banco: categoria=vaca, status=ativo, data_entrada=data_pesagem=data, em_lote=True
+    animal_repo = AnimalRepository(db_session)
+    a1 = animal_repo.get_by_fazenda_and_numero(FazendaEnum.TIZIU, "VL-01")
+    a2 = animal_repo.get_by_fazenda_and_numero(FazendaEnum.TIZIU, "VL-02")
+    assert a1 is not None and a2 is not None
+    for animal_obj, expected_peso in [(a1, Decimal("410.00")), (a2, Decimal("450.50"))]:
+        assert animal_obj.categoria == CategoriaAnimalEnum.VACA
+        assert animal_obj.status == StatusAnimalEnum.ATIVO
+        assert animal_obj.data_entrada == date(2026, 11, 2)
+        full_animal = animal_repo.get_by_id(animal_obj.id)
+        assert full_animal is not None
+        assert len(full_animal.pesagens) == 1
+        p = full_animal.pesagens[0]
+        assert p.data_pesagem == date(2026, 11, 2)
+        assert p.peso_kg == expected_peso
+        assert p.em_lote is True
+        assert p.lote_id is not None
+
+    # Ambos pertencem ao mesmo lote_id e aparecem no histórico de pesagens em lote
+    p1 = animal_repo.get_by_id(a1.id).pesagens[0]
+    p2 = animal_repo.get_by_id(a2.id).pesagens[0]
+    assert p1.lote_id == p2.lote_id
+
+    hist_resp = client.get("/pesagens/lote")
+    assert hist_resp.status_code == 200
+    assert "02/11/2026" in hist_resp.text
+    assert "2 animais" in hist_resp.text
+    assert "430,25 kg" in hist_resp.text
+
+    # 4. Mesmo número em outra fazenda é permitido (1 animal -> mensagem no singular)
+    post_other_farm = client.post(
+        "/animais/lote/novo",
+        data={
+            "fazenda": "ns_penha",
+            "data": "2026-11-03",
+            "numeros": ["VL-01"],
+            "pesos": ["395,25"],
+        },
+        follow_redirects=True,
+    )
+    assert post_other_farm.status_code == 200
+    assert "1 animal cadastrado em lote com sucesso!" in post_other_farm.text
+
+    # 5. Validações de erro no POST /animais/lote
+    # Nenhuma linha preenchida
+    r_empty = client.post(
+        "/animais/lote",
+        data={"fazenda": "tiziu", "data": "2026-11-02", "numeros": [""], "pesos": [""]},
+    )
+    assert r_empty.status_code == 422
+    assert "Preencha ao menos um animal" in r_empty.text
+
+    # Sem data
+    r_no_date = client.post(
+        "/animais/lote",
+        data={"fazenda": "tiziu", "data": "", "numeros": ["VL-03"], "pesos": ["400"]},
+    )
+    assert r_no_date.status_code == 422
+    assert "A data é obrigatória" in r_no_date.text
+
+    # Linha sem número
+    r_no_num = client.post(
+        "/animais/lote",
+        data={"fazenda": "tiziu", "data": "2026-11-02", "numeros": [""], "pesos": ["400"]},
+    )
+    assert r_no_num.status_code == 422
+    assert "informe o número do animal" in r_no_num.text
+
+    # Linha sem peso
+    r_no_peso = client.post(
+        "/animais/lote",
+        data={"fazenda": "tiziu", "data": "2026-11-02", "numeros": ["VL-03"], "pesos": [""]},
+    )
+    assert r_no_peso.status_code == 422
+    assert "informe o peso em kg" in r_no_peso.text
+
+    # Peso inválido (não numérico)
+    r_bad_peso = client.post(
+        "/animais/lote",
+        data={"fazenda": "tiziu", "data": "2026-11-02", "numeros": ["VL-03"], "pesos": ["abc"]},
+    )
+    assert r_bad_peso.status_code == 422
+    assert "inválido" in r_bad_peso.text
+
+    # Peso <= 0
+    r_zero_peso = client.post(
+        "/animais/lote",
+        data={"fazenda": "tiziu", "data": "2026-11-02", "numeros": ["VL-03"], "pesos": ["0"]},
+    )
+    assert r_zero_peso.status_code == 422
+    assert "maior que zero" in r_zero_peso.text
+
+    # Número repetido dentro do mesmo lote
+    r_dup_batch = client.post(
+        "/animais/lote",
+        data={
+            "fazenda": "tiziu",
+            "data": "2026-11-02",
+            "numeros": ["VL-99", "VL-99"],
+            "pesos": ["400", "410"],
+        },
+    )
+    assert r_dup_batch.status_code == 422
+    assert "repetido(s) no mesmo lote" in r_dup_batch.text
+
+    # Número já existente na mesma fazenda
+    r_existing = client.post(
+        "/animais/lote",
+        data={
+            "fazenda": "tiziu",
+            "data": "2026-11-02",
+            "numeros": ["VL-01"],
+            "pesos": ["400"],
+        },
+    )
+    assert r_existing.status_code == 422
+    assert "Já existe(m) animal(is) cadastrado(s)" in r_existing.text
+
+    # ValidationError do Pydantic (número com mais de 50 caracteres)
+    r_val_err = client.post(
+        "/animais/lote",
+        data={
+            "fazenda": "tiziu",
+            "data": "2026-11-02",
+            "numeros": ["X" * 60],
+            "pesos": ["400"],
+        },
+    )
+    assert r_val_err.status_code == 422
+
+    # ValueError (fazenda inválida)
+    r_fazenda_err = client.post(
+        "/animais/lote",
+        data={
+            "fazenda": "invalida",
+            "data": "2026-11-02",
+            "numeros": ["VL-10"],
+            "pesos": ["400"],
+        },
+    )
+    assert r_fazenda_err.status_code == 422
+
+    # Schema validation direta para AnimalLoteItem com string em branco
+    with pytest.raises(ValidationError):
+        AnimalLoteItem(numero="   ", peso_kg=Decimal("400"))
+
+    alc = AnimalLoteCreate(
+        fazenda=FazendaEnum.TIZIU,
+        data=date(2026, 11, 2),
+        itens=[AnimalLoteItem(numero="  555  ", peso_kg=Decimal("400"))],
+    )
+    assert alc.itens[0].numero == "555"
+
 
 
 

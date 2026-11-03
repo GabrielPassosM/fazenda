@@ -2,8 +2,13 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.application.schemas.animal import AnimalCreate, AnimalUpdate
+from app.application.schemas.animal import (
+    AnimalCreate,
+    AnimalLoteCreate,
+    AnimalUpdate,
+)
 from app.domain.models.animal import Animal
+from app.domain.models.enums import CategoriaAnimalEnum, StatusAnimalEnum
 from app.domain.models.pesagem import Pesagem
 from app.domain.repositories.animal_repository import AnimalRepository
 from app.domain.repositories.pasto_repository import PastoRepository
@@ -50,6 +55,69 @@ def create_animal(db: Session, data: AnimalCreate) -> Animal:
     db.commit()
     db.refresh(animal)
     return animal
+
+
+def create_animais_em_lote(db: Session, data: AnimalLoteCreate) -> list[Animal]:
+    animal_repo = AnimalRepository(db)
+    pesagem_repo = PesagemRepository(db)
+
+    seen_numeros: set[str] = set()
+    duplicados_lote: list[str] = []
+    for item in data.itens:
+        if item.numero in seen_numeros and item.numero not in duplicados_lote:
+            duplicados_lote.append(item.numero)
+        seen_numeros.add(item.numero)
+
+    if duplicados_lote:
+        dup_str = ", ".join(f"'{n}'" for n in duplicados_lote)
+        raise DomainError(
+            f"Número(s) repetido(s) no mesmo lote: {dup_str}."
+        )
+
+    numeros = [item.numero for item in data.itens]
+    existing_map = animal_repo.get_by_fazenda_and_numeros(data.fazenda, numeros)
+
+    existing_numeros: list[str] = []
+    for item in data.itens:
+        if item.numero in existing_map and item.numero not in existing_numeros:
+            existing_numeros.append(item.numero)
+
+    if existing_numeros:
+        numeros_str = ", ".join(f"'{n}'" for n in existing_numeros)
+        raise DomainError(
+            f"Já existe(m) animal(is) cadastrado(s) na fazenda {data.fazenda.label} com o(s) número(s): {numeros_str}."
+        )
+
+    animais_to_create: list[Animal] = []
+    for item in data.itens:
+        animais_to_create.append(
+            Animal(
+                numero=item.numero,
+                fazenda=data.fazenda,
+                data_entrada=data.data,
+                categoria=CategoriaAnimalEnum.VACA,
+                status=StatusAnimalEnum.ATIVO,
+            )
+        )
+
+    animal_repo.create_many(animais_to_create)
+
+    lote_id = uuid.uuid4()
+    pesagens_to_create: list[Pesagem] = []
+    for animal, item in zip(animais_to_create, data.itens, strict=True):
+        pesagens_to_create.append(
+            Pesagem(
+                animal_id=animal.id,
+                data_pesagem=data.data,
+                peso_kg=item.peso_kg,
+                em_lote=True,
+                lote_id=lote_id,
+            )
+        )
+
+    pesagem_repo.create_many(pesagens_to_create)
+    db.commit()
+    return animais_to_create
 
 
 def update_animal(db: Session, animal_id: uuid.UUID, data: AnimalUpdate) -> Animal:

@@ -8,7 +8,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.application.schemas.animal import AnimalCreate, AnimalUpdate
+from app.application.schemas.animal import (
+    AnimalCreate,
+    AnimalLoteCreate,
+    AnimalLoteItem,
+    AnimalUpdate,
+)
 from app.application.templating import templates
 from app.domain.models.enums import (
     CategoriaAnimalEnum,
@@ -19,6 +24,7 @@ from app.domain.models.enums import (
 from app.domain.repositories.animal_repository import AnimalRepository
 from app.domain.repositories.pasto_repository import PastoRepository
 from app.domain.use_cases.animal_use_cases import (
+    create_animais_em_lote,
     create_animal,
     delete_animal,
     update_animal,
@@ -238,6 +244,157 @@ def create_animal_submit(
                 "pastos": pasto_repo.list_all(),
                 "form_data": form_data,
                 "error": error_msg,
+            },
+            status_code=422,
+        )
+
+
+@router.get(
+    "/animais/lote",
+    response_class=HTMLResponse,
+    summary="Formulário de cadastro de animais em lote",
+)
+@router.get(
+    "/animais/lote/novo",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def new_animais_lote_form(
+    request: Request,
+    fazenda: str | None = Query(None),
+) -> HTMLResponse:
+    fazenda_val = (
+        fazenda
+        if fazenda in FazendaEnum._value2member_map_
+        else FazendaEnum.TIZIU.value
+    )
+    default_rows = [{"numero": "", "peso_kg": ""} for _ in range(5)]
+    return templates.TemplateResponse(
+        request=request,
+        name="animais/lote.html",
+        context={
+            "fazenda": fazenda_val,
+            "data": date.today().isoformat(),
+            "rows": default_rows,
+            "error": None,
+            "duplicate_numeros": set(),
+        },
+    )
+
+
+@router.post(
+    "/animais/lote",
+    response_class=HTMLResponse,
+    summary="Cadastrar animais em lote com peso inicial",
+)
+@router.post(
+    "/animais/lote/novo",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def create_animais_lote_submit(
+    request: Request,
+    fazenda: str = Form(FazendaEnum.TIZIU.value),
+    data: str = Form(""),
+    numeros: list[str] = Form(default=[]),
+    pesos: list[str] = Form(default=[]),
+    db: Session = Depends(get_db),
+):
+    rows: list[dict[str, str]] = []
+    max_len = max(len(numeros), len(pesos), 1)
+    for i in range(max_len):
+        num = numeros[i].strip() if i < len(numeros) else ""
+        peso = pesos[i].strip() if i < len(pesos) else ""
+        rows.append(
+            {
+                "numero": num,
+                "peso_kg": peso,
+            }
+        )
+
+    filled_rows = [r for r in rows if r["numero"] or r["peso_kg"]]
+    duplicate_numeros: set[str] = set()
+
+    try:
+        if not filled_rows:
+            raise DomainError("Preencha ao menos um animal e seu respectivo peso.")
+
+        dt = _parse_date(data)
+        if dt is None:
+            raise DomainError("A data é obrigatória.")
+
+        fazenda_enum = FazendaEnum(fazenda)
+        itens_schema: list[AnimalLoteItem] = []
+
+        for idx, r in enumerate(filled_rows, start=1):
+            if not r["numero"]:
+                raise DomainError(f"Linha {idx}: informe o número do animal.")
+            if not r["peso_kg"]:
+                raise DomainError(
+                    f"Linha {idx} (Animal nº {r['numero']}): informe o peso em kg."
+                )
+            try:
+                peso_dec = _parse_decimal(r["peso_kg"])
+            except InvalidOperation as exc:
+                raise DomainError(
+                    f"Linha {idx} (Animal nº {r['numero']}): peso '{r['peso_kg']}' inválido."
+                ) from exc
+
+            if peso_dec is None or peso_dec <= 0:
+                raise DomainError(
+                    f"Linha {idx} (Animal nº {r['numero']}): o peso deve ser maior que zero."
+                )
+
+            itens_schema.append(
+                AnimalLoteItem(
+                    numero=r["numero"],
+                    peso_kg=peso_dec,
+                )
+            )
+
+        repo = AnimalRepository(db)
+        found_map = repo.get_by_fazenda_and_numeros(
+            fazenda_enum, [item.numero for item in itens_schema]
+        )
+        seen_nums: set[str] = set()
+        for item in itens_schema:
+            if item.numero in found_map or item.numero in seen_nums:
+                duplicate_numeros.add(item.numero)
+            seen_nums.add(item.numero)
+
+        lote_schema = AnimalLoteCreate(
+            fazenda=fazenda_enum,
+            data=dt,
+            itens=itens_schema,
+        )
+        created = create_animais_em_lote(db, lote_schema)
+        qtd = len(created)
+        msg = urllib.parse.quote(
+            f"{qtd} {'animal cadastrado' if qtd == 1 else 'animais cadastrados'} em lote com sucesso!"
+        )
+        return RedirectResponse(url=f"/?msg={msg}", status_code=303)
+
+    except (DomainError, ValidationError, ValueError) as exc:
+        if isinstance(exc, DomainError):
+            error_msg = exc.message
+        elif isinstance(exc, ValidationError):
+            error_msg = exc.errors()[0].get("msg", "Dados inválidos no lote.")
+        else:
+            error_msg = str(exc)
+
+        display_rows = filled_rows if filled_rows else rows
+        while len(display_rows) < 3:
+            display_rows.append({"numero": "", "peso_kg": ""})
+
+        return templates.TemplateResponse(
+            request=request,
+            name="animais/lote.html",
+            context={
+                "fazenda": fazenda,
+                "data": data,
+                "rows": display_rows,
+                "error": error_msg,
+                "duplicate_numeros": duplicate_numeros,
             },
             status_code=422,
         )

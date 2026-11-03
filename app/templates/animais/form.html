@@ -4,19 +4,29 @@
 
 {% block content %}
 <div class="mx-auto max-w-2xl">
-    <div class="mb-6">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <a
+                href="{{ '/animais/' ~ animal.id if is_edit else '/' }}"
+                class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800"
+            >
+                ← {{ "Voltar para detalhes do animal" if is_edit else "Voltar para a listagem do rebanho" }}
+            </a>
+            <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                {{ "Editar Animal " ~ animal.numero if is_edit else "Cadastrar Novo Animal" }}
+            </h1>
+            <p class="mt-1 text-sm text-slate-600">
+                {{ "Atualize as informações cadastrais e status do animal." if is_edit else "Preencha os dados do animal. Você também pode registrar o peso inicial no mesmo passo." }}
+            </p>
+        </div>
+        {% if not is_edit %}
         <a
-            href="{{ '/animais/' ~ animal.id if is_edit else '/' }}"
-            class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800"
+            href="/animais/lote"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 shadow-2xs transition hover:bg-emerald-100"
         >
-            ← {{ "Voltar para detalhes do animal" if is_edit else "Voltar para a listagem do rebanho" }}
+            + Cadastrar em Lote
         </a>
-        <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-            {{ "Editar Animal " ~ animal.numero if is_edit else "Cadastrar Novo Animal" }}
-        </h1>
-        <p class="mt-1 text-sm text-slate-600">
-            {{ "Atualize as informações cadastrais e status do animal." if is_edit else "Preencha os dados do animal. Você também pode registrar o peso inicial no mesmo passo." }}
-        </p>
+        {% endif %}
     </div>
 
     <form
