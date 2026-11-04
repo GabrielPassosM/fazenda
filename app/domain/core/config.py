@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = ""
 
+    ACCESS_PASSWORD: str = "fazenda123"
+    SECRET_KEY: str = "dev-secret-key-change-in-production"
+    SESSION_EXPIRE_DAYS: int = 30
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

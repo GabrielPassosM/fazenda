@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.domain.core.security import SESSION_COOKIE_NAME, create_session_token
 from app.domain.models.base import Base
 from app.infrastructure.database import get_db
 from app.main import app
@@ -40,6 +41,7 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
+        test_client.cookies.set(SESSION_COOKIE_NAME, create_session_token())
         yield test_client
     app.dependency_overrides.clear()
 
